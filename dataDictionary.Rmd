@@ -609,14 +609,14 @@ malariaDataDictionary = reactive({
             !grepl( '\\<hiv\\>|\\<tb\\>' , mdd$dataElement , ignore.case = TRUE )
          )
     
-    fever = quo( grepl( '\\<fever\\>' , mdd$dataElement , ignore.case = TRUE )  &
-         !grepl( '\\<yellow\\>|\\<typhoid\\|hemor>' , mdd$dataElement , ignore.case = TRUE )
+    fever = quo( grepl( 'fever|fievre' , mdd$dataElement , ignore.case = TRUE )  &
+         !grepl( '\\<yellow\\>|\\<typhoid\\>|hemor|typh' , mdd$dataElement , ignore.case = TRUE )
          )
     
-    attendance = quo( grepl( '\\<attendance\\|consult' , mdd$dataElement , ignore.case = TRUE ) )
+    attendance = quo( grepl( '\\<attendance\\>|consult' , mdd$dataElement , ignore.case = TRUE ) )
     
     anc = quo( 
-        grepl( '\\<anc\\>|\\<CPN\\>|IPT|TPI|pregnant|enceintes' , 
+        grepl( '\\<anc\\>|\\<CPN\\>|IPT|TPI' , 
                mdd$dataElement , ignore.case = TRUE )  &
             !grepl( 'tb|hiv|vih' , mdd$dataElement , ignore.case = TRUE ) 
         )
@@ -759,6 +759,34 @@ conditionalPanel(condition="$('html').hasClass('shiny-busy')",
                           tags$div( "Loading...", id = "loadmessage" )
          ) 
 
+indicator_formula_translator = function( num_denom, id_names ){
+  
+  ids_between_braces = str_extract_all( num_denom , "\\{.*?\\}" )[[1]] %>% gsub("\\{|\\}", "", .)
+  
+  unique_ids = str_split( ids_between_braces , "\\.") %>% unlist %>% unique
+  
+  # lookup table 
+  element_names = id_names %>% filter( id %in% unique_ids )
+  
+  # replace ids with names 
+  for( .x in 1:nrow( element_names ) ){ 
+    if ( .x ==1 ) text = num_denom 
+    text = gsub( unique_ids[.x] , 
+                 paste0( '[' , element_names[.x, 'name'], ']' ) ,
+                 text, fixed = TRUE  ) 
+  } 
+  
+  
+  # trim braces and expand space around operators
+  num_names = text %>%
+    gsub( "\\{|\\}|\\#" , "", .) %>%
+    gsub( "\\+" , " + " , . ) %>%
+    gsub( "\\-" , " + " , . )
+  
+  return( num_names )
+}
+
+
 indicators = reactive({
         
     if (  login() ){
@@ -773,6 +801,23 @@ indicators = reactive({
     
     } else { "Unable to login to server" }
 }) 
+
+indicators_translation = reactive({
+  
+  de = dataElements() %>%  select( id, name )
+    
+  url<-paste0( baseurl() , "api/categoryOptionCombos.json?fields=:all&paging=false")
+  coc =  get( url )[[1]] %>% select( id, name ) 
+  id_names = bind_rows( de , coc )
+  
+  ind = indicators() %>%
+    mutate( numerator_label =  indicator_formula_translator( num_denom = numerator ,  id_names = id_names) ,
+            denominator_label =  indicator_formula_translator( num_denom = denominator ,  id_names = id_names) 
+    )
+  
+  return( ind )
+  
+})
 
 indicator.rows = reactive({ 
   
@@ -790,7 +835,7 @@ The following indicators contain malaria-relevant data elements in their formula
 ```{r}
 DT::renderDataTable( 
     
-    indicators()  , options = list(pageLength = 25)
+    indicators_translation()  , options = list(pageLength = 25)
 
 )
 ```
