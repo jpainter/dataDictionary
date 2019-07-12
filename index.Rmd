@@ -414,13 +414,13 @@ dataDictionary = reactive({
     
     select( dataSet, dataElement, n_categoryOptions, Categories , dataElementGroup , zeroIsSignificant , 
             periodType ,
-            dataElement.id, Category.ids , shortName , displayName, displayShortName )  %>%   
+            dataElement.id, Category.ids , shortName , displayName, displayShortName )     
   
   # collapse all muliptle entries for each data element
-  group_by( dataElement.id ) %>%
-    summarise_all(
-        list( ~paste( unique(.) , collapse = ';\n' ) )
-        )
+  # group_by( dataElement.id ) %>%
+  #   summarise_all(
+  #       list( ~paste( unique(.) , collapse = ';\n' ) )
+  #       )
   
   
   # For versions <2.6, need to add categoryCombo
