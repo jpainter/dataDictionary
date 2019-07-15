@@ -28,7 +28,7 @@ suppressMessages(
   lapply( libraries , require  , character.only = TRUE) 
 
 # load modules
-source( 'data_dictionary_module.R' )
+source( 'login_info.R' )
 
 # setup ####
 
@@ -44,7 +44,7 @@ ui <- dashboardPage(
     sidebarUserPanel("John Painter, CDC-PMI"),
     sidebarMenu(
       menuItem("Dashboard Overview", tabName = "Info_page", 
-               icon = icon("anopheles")
+               icon = icon("fa-book-reader")
                ),
       menuItem("Data Elements and Indicators", 
                tabName = "DD", icon = icon("chart-line")),
@@ -80,7 +80,7 @@ ui <- dashboardPage(
 ## Data Elements and Indicators Tab ####
       tabItem(tabName = 'DD',
               
-              dataDictionaryUI( "one" )
+              login_info_UI( "one" )
 )
       ,
 ## Organisational Units Tab ####
@@ -113,7 +113,7 @@ ui <- dashboardPage(
 # Define server logic #####
 server <-  function(input, output, session){
    
-   callModule( dataDictionary, "one" )
+   callModule( login_info, "one" )
 }
 
 # Run the application 

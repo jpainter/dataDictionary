@@ -9,6 +9,8 @@ library( jsonlite )
 library( httr )
 library( curl )
 library( assertthat )
+library( rlang )
+library( stringi )
 library( DT )
 
 
@@ -43,7 +45,7 @@ get = function( source_url , .print = TRUE , ...){
 }
 
 # Module UI function  ####
-dataDictionaryUI <- function( id ) {
+login_info_UI <- function( id ) {
   # Create a namespace function using the provided id
   ns <- NS(id)
   
@@ -74,7 +76,7 @@ dataDictionaryUI <- function( id ) {
 }
 
 # Server function ####
-dataDictionary <- function( input, output, session ) {
+login_info <- function( input, output, session ) {
   
   
   observe({
