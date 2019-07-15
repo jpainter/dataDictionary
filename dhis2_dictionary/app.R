@@ -2,15 +2,28 @@
 # This is a Shiny web application. You can run the application by clicking
 # the 'Run App' button above.
 
-# load libraries 
-library(shiny)
-library(shinydashboard)
-library( shinythemes )
-# library(dashboardthemes)
-library(plotly)
-library(tidyverse)
-library(googleVis)
-library(scales)
+
+# install and load libraries
+
+libraries = as.character( 
+  quote( c( shiny, shinydashboard, plotly, tidyverse, googleVis, scales , 
+               knitr, rland, stringi, tidyselect, jsonlite, httr, curl, asserthat, DT ) )[-1]
+)
+
+# Function to test if package is installed 
+pkgTest <- function( package.list = libraries ){
+  
+  missing.packages = setdiff( package.list , rownames(installed.packages())) 
+  if ( length( missing.packages ) > 0 ) install.packages( missing.packages , dependencies = TRUE ) 
+}
+
+# Test if packages loaded
+pkgTest( libraries )
+
+# load the packages
+suppressMessages( 
+  lapply( libraries , require  , character.only = TRUE) 
+)
 
 # load modules
 source( 'data_dictionary_module.R' )
