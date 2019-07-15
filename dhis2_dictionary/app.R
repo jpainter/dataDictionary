@@ -25,6 +25,8 @@ suppressMessages(
   lapply( libraries , require  , character.only = TRUE) 
 )
 
+  lapply( libraries , require  , character.only = TRUE) 
+
 # load modules
 source( 'data_dictionary_module.R' )
 
