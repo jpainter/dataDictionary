@@ -1,4 +1,4 @@
-# data_dictionary_module
+# login_info_module
 
 library( knitr )
 library( tidyverse )
@@ -149,5 +149,7 @@ login_info <- function( input, output, session ) {
     
     , striped = TRUE , spacing = 's'
   )
+  
+  return( list( login = login , baseurl = baseurl  ) )
     
 }

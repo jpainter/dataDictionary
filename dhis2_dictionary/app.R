@@ -25,10 +25,9 @@ suppressMessages(
   lapply( libraries , require  , character.only = TRUE) 
 )
 
-  lapply( libraries , require  , character.only = TRUE) 
-
 # load modules
 source( 'login_info.R' )
+source( 'data_elements.R' )
 
 # setup ####
 
@@ -43,10 +42,10 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarUserPanel("John Painter, CDC-PMI"),
     sidebarMenu(
-      menuItem("Dashboard Overview", tabName = "Info_page", 
+      menuItem("Overview", tabName = "Info_page", 
                icon = icon("fa-book-reader")
                ),
-      menuItem("Data Elements and Indicators", 
+      menuItem("Data Elements", 
                tabName = "DD", icon = icon("chart-line")),
       menuItem("Organisational Units", tabName = "OU", icon = icon("map"))
     )
@@ -80,7 +79,9 @@ ui <- dashboardPage(
 ## Data Elements and Indicators Tab ####
       tabItem(tabName = 'DD',
               
-              login_info_UI( "one" )
+              login_info_UI( "one" ) , 
+              
+              data_elements_UI( "one" )
 )
       ,
 ## Organisational Units Tab ####
@@ -113,7 +114,9 @@ ui <- dashboardPage(
 # Define server logic #####
 server <-  function(input, output, session){
    
-   callModule( login_info, "one" )
+   login_baseurl = callModule( login_info , "one" ) 
+  
+   callModule( data_elements , "one" , login_baseurl = login_baseurl )
 }
 
 # Run the application 
