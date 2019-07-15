@@ -25,6 +25,14 @@ suppressMessages(
   lapply( libraries , require  , character.only = TRUE) 
 )
 
+# Test if packages loaded
+pkgTest( package.list )
+
+# load the packages
+suppressMessages( 
+  lapply( package.list, require  , character.only = TRUE) 
+)
+
 # load modules
 source( 'data_dictionary_module.R' )
 
