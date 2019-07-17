@@ -1,19 +1,5 @@
 # login_info_module
 
-library( knitr )
-library( tidyverse )
-library( rlang )
-library( stringi )
-library( tidyselect )
-library( jsonlite )
-library( httr )
-library( curl )
-library( assertthat )
-library( rlang )
-library( stringi )
-library( DT )
-
-
 # Helper functions
 # Login ####
 loginDHIS2<-function( baseurl, username, password) {

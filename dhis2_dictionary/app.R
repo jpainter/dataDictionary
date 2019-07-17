@@ -3,12 +3,13 @@
 # the 'Run App' button above.
 
 
-# install and load libraries
+# install and load libraries ####
 
 libraries = as.character( 
   quote( c( shiny, shinydashboard, plotly, tidyverse, googleVis, scales , 
-               knitr, rland, stringi, tidyselect, jsonlite, httr, curl, asserthat, DT ) )[-1]
+               knitr, rlang, stringi, tidyselect, jsonlite, httr, curl, assertthat, DT ) )[-1]
 )
+
 
 # Function to test if package is installed 
 pkgTest <- function( package.list = libraries ){
@@ -25,9 +26,10 @@ suppressMessages(
   lapply( libraries , require  , character.only = TRUE) 
 )
 
-# load modules
+# load modules ####
 source( 'login_info.R' )
 source( 'data_elements.R' )
+source( 'malaria_data_elements.R' )
 
 # setup ####
 
@@ -42,12 +44,23 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarUserPanel("John Painter, CDC-PMI"),
     sidebarMenu(
+      
       menuItem("Overview", tabName = "Info_page", 
                icon = icon("fa-book-reader")
                ),
+      
+      menuItem("Login", 
+               tabName = "LOG", icon = icon("chart-line")),
+      
       menuItem("Data Elements", 
-               tabName = "DD", icon = icon("chart-line")),
-      menuItem("Organisational Units", tabName = "OU", icon = icon("map"))
+               tabName = "DE", icon = icon("chart-line")),
+      
+      
+      menuItem("Malaria Data Elements", tabName = "MDE", icon = icon("chart-line")) ,
+      
+      menuItem("Organisational Units", tabName = "OU", icon = icon("map")) ,
+      
+      menuItem("Contact", tabName = "contact", icon = icon("help")) 
     )
   ),
   
@@ -62,7 +75,7 @@ ui <- dashboardPage(
     tabItems(
       
 ## Intro Tab ####
-      tabItem(tabName = 'Info_page',
+      tabItem( tabName = 'Info_page',
               fluidRow(
                 column(
                 width = 12,
@@ -76,14 +89,28 @@ ui <- dashboardPage(
                 ))
               ))
       ,
-## Data Elements and Indicators Tab ####
-      tabItem(tabName = 'DD',
-              
-              login_info_UI( "one" ) , 
-              
-              data_elements_UI( "one" )
+
+## Login Tab ####
+tabItem( tabName = 'LOG',
+         
+         login_info_UI( "login" ) 
+
+)
+,
+## Data Elements Tab ####
+      tabItem( tabName = 'DE',
+               
+               data_elements_UI( "de" )
 )
       ,
+
+## Malaria Data Elements Tab ####
+    tabItem( tabName = 'MDE' ,  
+             
+             malaria_data_elements_UI( "mde" )
+    )
+    ,
+
 ## Organisational Units Tab ####
       tabItem(tabName = 'OU',
               fluidRow(
@@ -105,7 +132,30 @@ ui <- dashboardPage(
                     # , img(src = 'beer.jpg', width = "100%", align = "center")
                   )
                 )
+              )) ,
+
+## Contact Tab ####
+tabItem(tabName = 'contact',
+        fluidRow(
+          column(
+            width = 6,
+            box(
+              title = strong('Contact for more information'),
+              solidHeader = T,
+              width = NULL,
+              HTML(paste(h4("" )
               ))
+            )),
+          column(
+            width = 6,
+            align = 'center',
+            box(
+              # background = "black",
+              width = NULL
+              # , img(src = 'beer.jpg', width = "100%", align = "center")
+            )
+          )
+        ))
       
     )
   )
@@ -114,9 +164,12 @@ ui <- dashboardPage(
 # Define server logic #####
 server <-  function(input, output, session){
    
-   login_baseurl = callModule( login_info , "one" ) 
+   login_baseurl = callModule( login_info , "login" ) 
   
-   callModule( data_elements , "one" , login_baseurl = login_baseurl )
+   data_dictionary = callModule( data_elements , "de" , login_baseurl = login_baseurl )
+   
+   malaria_data_elements = callModule( malaria_data_elements , "mde" , 
+                                       data_elements = data_dictionary )
 }
 
 # Run the application 

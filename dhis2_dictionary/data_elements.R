@@ -1,4 +1,4 @@
-# login_info_module
+# data_elements_module
 
 library( knitr )
 library( tidyverse )
@@ -15,15 +15,6 @@ library( DT )
 
 
 # Helper functions
-# Login ####
-loginDHIS2<-function( baseurl, username, password) {
-  
-  url<-paste0( baseurl, "api/me" )
-  
-  r <-  GET( url, authenticate(username, password) ) 
-  
-  assert_that( r$status_code == 200L ) 
-}
 
 # JSON helper function ####
 ## gets json text from url and converts to data frame 
@@ -301,5 +292,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
     dataDictionary()
 
   )
+  
+  return(  dataDictionary  ) # return reactive expression with data dictionary
     
 }
