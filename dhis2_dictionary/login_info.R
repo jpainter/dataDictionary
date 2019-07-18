@@ -38,7 +38,8 @@ login_info_UI <- function( id ) {
   tagList(
 
     tabsetPanel(type = "tabs",
-                tabPanel("login", 
+                
+                tabPanel("Login", 
                          
                          inputPanel(
                            
@@ -48,11 +49,29 @@ login_info_UI <- function( id ) {
                            
                            passwordInput( ns("password") , label = "Password:", NULL ), # "district"
                            
-                           checkboxInput( ns("demo") , label = "Test: use dhis2 demo", FALSE )
+                           checkboxInput( ns("demo") , label = "Click to use admin:district credentials with the dhis2 demo", FALSE )
                          ) , 
                          
+                         br() , br() ,
+
                          textOutput( ns('connection') ) ,
+                         
+                         br() , br() ,
+                         
                          tableOutput( ns('systemInfo') )
+                         
+                         ) ,
+                
+                tabPanel("Resources", 
+                         
+                         h3( "The table below lists a link to retrieve metadata (not the data) for each DHIS2 attribute.") ,
+                         
+                         h4("Simply paste the link into a new brower window.  This is the mechanism used to retrieve all the information displayed in this app." ) ,
+                         h4( "Note that the user will need to login into the DHIS2 in order to see the metadata.") ,
+                         
+                         textOutput( ns('resource_info') ) ,
+                         
+                         tableOutput( ns('resource_table') ) 
                          
                          )
     )
@@ -93,7 +112,7 @@ login_info <- function( input, output, session ) {
     
     login = try( loginDHIS2( baseurl , input$username, input$password) )
     if ( class( login ) == "logical" ) return( login ) 
-    return( FALSE )
+    return( NULL )
   })
   
   system.info = reactive({
@@ -113,9 +132,12 @@ login_info <- function( input, output, session ) {
                 intervalSinceLastAnalyticsTableSuccess ,
                 lastAnalyticsTableRuntime ,
                 calendar, dateFormat )
-    } else { NA }
+      
+    } else { NULL }
   }) 
   
+
+
   output$connection = renderText({  
     req( baseurl() ) 
     # req( login() )
@@ -136,6 +158,42 @@ login_info <- function( input, output, session ) {
     , striped = TRUE , spacing = 's'
   )
   
+  
+  output$resource_info = renderText({  
+    
+    # h1( "- The href column lists a url (e.g. https://play.dhis2.org/2.28/api/categories) that will returns a short list of information for each attribute.")
+    # 
+    # h2( "- Appending '?fields=:all&paging=false' (e.g. https://play.dhis2.org/2.28/api/categories?fields=:all&paging=false) to the url will provide all available information for that attribute. ")
+  })
+  
+  
+  resources = reactive({
+      
+      if ( login() ){
+        # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
+        # if available, use resources method
+        
+        url = paste0( baseurl() , "api" )
+        resources =  get( url )[['resources']]  %>% as_tibble() 
+      }
+    }) 
+  
+  conditionalPanel( condition="$('html').hasClass('shiny-busy')",
+                   tags$div("Loading...",id="loadmessage")
+  ) 
+  
+  output$resource_table = renderTable( 
+    
+    resources() %>% select( displayName, href ) %>% 
+      rename( Attribute = displayName ) %>%
+      mutate( href = paste0( href , '?fields=:all&paging=false' ) ) %>%
+      arrange( Attribute ) ,
+    
+    striped = TRUE , spacing = 's' 
+    
+  )
+  
   return( list( login = login , baseurl = baseurl  ) )
     
 }
+

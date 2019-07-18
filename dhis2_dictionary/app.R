@@ -14,11 +14,11 @@ libraries = as.character(
 # Function to test if package is installed 
 pkgTest <- function( package.list = libraries ){
   
-  missing.packages = setdiff( package.list , rownames(installed.packages())) 
+  missing.packages = setdiff( package.list , rownames(installed.packages()) ) 
   if ( length( missing.packages ) > 0 ) install.packages( missing.packages , dependencies = TRUE ) 
 }
 
-# Test if packages loaded
+# Test if packages installed
 pkgTest( libraries )
 
 # load the packages
@@ -42,23 +42,28 @@ ui <- dashboardPage(
   
   #https://shiny.rstudio.com/reference/shiny/1.0.1/icon.html (choose icon)
   dashboardSidebar(
-    sidebarUserPanel("John Painter, CDC-PMI"),
+    sidebarUserPanel("jp"),
     sidebarMenu(
       
-      menuItem("Overview", tabName = "Info_page", 
+      menuItem( 'Background and Directions' , tabName = "info_page", 
                icon = icon("fa-book-reader")
                ),
       
       menuItem("Login", 
                tabName = "LOG", icon = icon("chart-line")),
       
-      menuItem("Data Elements", 
+      menuItem("All Data Elements", 
                tabName = "DE", icon = icon("chart-line")),
       
-      
-      menuItem("Malaria Data Elements", tabName = "MDE", icon = icon("chart-line")) ,
+      menuItem("Malaria-relevant Data Elements", tabName = "MDE", icon = icon("chart-line")) ,
       
       menuItem("Organisational Units", tabName = "OU", icon = icon("map")) ,
+      
+      menuItem("Reporting Rates", tabName = "OU", icon = icon("chart-line")) ,
+      
+      menuItem("Data Quality", tabName = "OU", icon = icon("chart-line")) ,
+      
+      menuItem("Estimates and Trends", tabName = "OU", icon = icon("chart-line")) ,
       
       menuItem("Contact", tabName = "contact", icon = icon("help")) 
     )
@@ -70,24 +75,33 @@ ui <- dashboardPage(
   # custom CSS
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
-    ),
+    ) ,
     
     tabItems(
       
-## Intro Tab ####
-      tabItem( tabName = 'Info_page',
+## Background and Directions Tab ####
+      
+
+      tabItem( tabName = 'info_page',
               fluidRow(
                 column(
-                width = 12,
+                width = 6,
                 box(
-                  title = strong('Purpose of This Dashboard'),
+                  title = strong('Background'),
                   solidHeader = T,
                   width = NULL,
-                  HTML(paste(h4(
-                    "The purpose of this dashboard is to help the user understand the contents and structure of their health information data in DHIS2" )
+                  map( readLines('intro_text.txt') , h4 )
+                  )) ,
+                column(
+                  width = 6,
+                  box(
+                    title = strong('Directions'),
+                    solidHeader = T,
+                    width = NULL,
+                    map( readLines('how_to_use.txt') , h4 )
                   ))
                 ))
-              ))
+
       ,
 
 ## Login Tab ####
@@ -140,7 +154,7 @@ tabItem(tabName = 'contact',
           column(
             width = 6,
             box(
-              title = strong('Contact for more information'),
+              title = strong('For assistance and more information, please contact'),
               solidHeader = T,
               width = NULL,
               HTML(paste(h4("" )
@@ -151,7 +165,9 @@ tabItem(tabName = 'contact',
             align = 'center',
             box(
               # background = "black",
-              width = NULL
+              width = NULL ,
+              h4( "John Painter, CDC-PMI" ) ,
+              h4( "jpainter@cdc.gov" )
               # , img(src = 'beer.jpg', width = "100%", align = "center")
             )
           )
@@ -164,6 +180,8 @@ tabItem(tabName = 'contact',
 # Define server logic #####
 server <-  function(input, output, session){
    
+   session$onSessionEnded(stopApp) # stop shiny when browser closes
+  
    login_baseurl = callModule( login_info , "login" ) 
   
    data_dictionary = callModule( data_elements , "de" , login_baseurl = login_baseurl )

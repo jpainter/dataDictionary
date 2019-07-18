@@ -13,30 +13,30 @@ malaria_data_elements_UI <- function( id ) {
   
   tagList(
     
-    downloadButton( ns( 'download_Malaria_Data' ) , 'Download') ,
-    
     tabsetPanel(type = "tabs",
-                tabPanel( "Malaria Data Elements" ,
-
-                          inputPanel(
-
-                             textInput( ns("malaria_words") ,
-                                       label = "Malaria-relevant search terms",
-                                       malaria_search_words , width = '100%' ),
-
-                             textInput( ns("not_malaria_words") ,
-                                       label = "exclude search terms" ,
-                                       not_malaria_search_words , width = '100%' ) ,
-                             
-                             width = '100%'
-
-                          )
+                
+                tabPanel( "Malaria-relevant search terms" ,
+                          
+                          fluidRow(
+                            box(width = 12, title = NULL , 
+                                
+                                  textInput( ns("malaria_words") , "Include items with this text" ,
+                                             malaria_search_words ),
+                                
+                                  textInput( ns("not_malaria_words") , "Exclude items with this text" ,
+                                             not_malaria_search_words )
+                            )
+                          ) 
 
                 )
-    )
+    )  ,
+    
+    textOutput( ns('number_elements') ) ,
+    
+    downloadButton( ns( 'download_Malaria_Data' ) , 'Download') ,
     
     
-    , dataTableOutput( ns('malariaDataDictionary') )
+    dataTableOutput( ns('malariaDataDictionary') )
     
   )
 }
@@ -84,7 +84,7 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
     
   })
   
-  
+  # print number of malaria relevent data elements
   search.rows = reactive({ 
     
     req( malariaDataDictionary() )
@@ -92,8 +92,20 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
     paste( 'There are', mdd.rows , '(most likely) malaria relevant data elements' ) 
   })
   
-  renderText( search.rows() )
   
+  output$number_elements  = renderText( search.rows() )
+  
+  # download button
+  output$download_Malaria_Data <- downloadHandler(
+    filename = function() { 
+      return( paste('malariaDataDictionary', '.csv', sep=''))
+    }, 
+    content = function(file) {
+      write.csv( malariaDataDictionary() , file)
+    }
+  )
+  
+
   output$malariaDataDictionary = DT::renderDataTable( 
     
     malariaDataDictionary()  , 

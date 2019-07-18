@@ -1,0 +1,10 @@
+      The purpose of this website is to help the user understand the contents and structure of data in DHIS2.  Ultimately, we want to encourage data use and meaningful interpretation. To that end, we built several helper tools that help identify and interpret key data signals.  
+      
+When completed, these tools will assist with:
+
+1. Finding and selecting the correct data elements and indicators
+2. Ensuring indicator formulas correct
+3. Calculating the real reporting rate for key indicators
+4. Estimating the quality of data based on internal consistency and external validity^[provide reference], providing useful guidelines for interpreting data based on the apparent quality 
+5. Estimating the trends in confirmed cases (and other indicators), and identifying when differences between regions are significant.  
+

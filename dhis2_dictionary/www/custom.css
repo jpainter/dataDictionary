@@ -15,15 +15,20 @@ color: #000000 ;
 background-color: #FFFAF0;
 }
 
+/* navbar (rest of the header) */
+        .skin-blue .main-header .navbar {
+                              background-color: #FFFAF0;
+                              color: #000000 ;
+                              } 
+
 /* logo when hovered */
 .skin-blue .main-header .logo:hover {
 background-color: #FFFAF0;
 }
 
-/* navbar (rest of the header) */
-.skin-blue .main-header .navbar {
-background-color: #FFFAF0;
-color: #000000 ;
+/* navbar toggle*/
+.skin-blue .main-header .sidebar-toggle:before {
+  color: #000000 ;
 }
 
 /* main sidebar */

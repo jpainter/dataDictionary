@@ -1,0 +1,5 @@
+Use the menu at left to go through each tool.
+
+1. Login Enter the DHIS2 URL, username, and password.
+
+Note: this section, and several of the tools, under development. The current state should be seen as a proof of concept before adding additional functionality.  
