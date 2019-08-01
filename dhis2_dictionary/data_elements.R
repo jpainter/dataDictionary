@@ -70,9 +70,12 @@ data_elements <- function( input, output, session , login_baseurl ) {
   login = reactive({ login_baseurl$login() })
   baseurl = reactive({ login_baseurl$baseurl() })
   
+
   dataElements = reactive({
     
     if (  login() ){ 
+      
+      showModal(modalDialog("Downloading list of data elements", footer=NULL))
       
       # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
       # if available, use resources method
@@ -81,12 +84,18 @@ data_elements <- function( input, output, session , login_baseurl ) {
                 'zeroIsSignificant' )
       dataElements =  get( url )[[1]] %>% select( !!cols ) 
       
+      removeModal()
+      
+      return( dataElements )
+      
     } else { "Unable to login to server" }
   }) 
   
   dataElementGroups = reactive({
 
     if (  login() ){
+      
+      showModal(modalDialog("Downloading list of data element groups", footer=NULL))
 
       # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
       # if available, use resources method
@@ -105,6 +114,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
         summarise(
           dataElementGroup = paste( dataElementGroup, collapse = "\n")
         )
+      
+      removeModal()
 
       return( deg )
 
@@ -115,6 +126,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
   dataSets = reactive({
 
     if (  login() ){
+      
+      showModal(modalDialog("Downloading list of datasets", footer=NULL))
 
       # if available, use resources method
       url<-paste0( baseurl() , "api/dataSets.json?fields=:all&paging=false")
@@ -124,6 +137,10 @@ data_elements <- function( input, output, session , login_baseurl ) {
       dataSets =  get( url )[[1]] %>% select( !!cols ) %>%
         rename( dataSet.id = id, dataSet = name )
 
+      removeModal()
+      
+      return( dataSets )
+      
     } else { "Unable to login to server" }
   })
   
@@ -132,11 +149,17 @@ data_elements <- function( input, output, session , login_baseurl ) {
 
     if (  login() ){
 
+      showModal(modalDialog("Downloading list of categoryCombos", footer=NULL))
+      
       # if available, use resources method
       url<-paste0( baseurl() , "api/categoryCombos.json?fields=:all&paging=false")
       cols = c( 'id', 'name'  )
       categoryCombos =  get( url )[[1]] %>% select( !!cols ) %>%
         rename( categoryCombo.id = id, categoryCombo = name )
+
+      removeModal()
+      
+      return( categoryCombos )
 
     } else { "Unable to login to server" }
   })
@@ -146,6 +169,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
 
     if (  login() ){
 
+      showModal(modalDialog("Downloading list of categoryOptionCombos", footer=NULL))
+      
       # if available, use resources method
       url<-paste0( baseurl() , "api/categoryOptionCombos.json?fields=:all&paging=false")
       cols = c( 'id', 'name',  'categoryCombo' )
@@ -170,7 +195,9 @@ data_elements <- function( input, output, session , login_baseurl ) {
           Categories = paste( categoryOptionCombo , collapse = ' ;\n '  ) ,
           Category.ids = paste( categoryOptionCombo.id , collapse = ' ;\n '  )
         )
-
+      
+      removeModal()
+      
       return( categories )
 
     } else { "Unable to login to server" }
@@ -187,27 +214,25 @@ data_elements <- function( input, output, session , login_baseurl ) {
 
   })
 
-  output$n_de = renderText( de.rows() )
-
   ds.rows = reactive({
     req( dataSets() )
     ds = dataSets()
     ds.rows = nrow(ds)
-    paste( 'There are', ds.rows , 'data sets (forms) ' )
+    paste( ds.rows , 'data sets (forms) ' )
 
   })
-
-  output$n_ds = renderText( ds.rows() )
 
   cc.rows = reactive({
     req( categoryCombos() )
     cc = categoryCombos()
     cc.rows = nrow(cc)
-    paste( 'There are', cc.rows , 'categoryCombos ' )
+    paste( cc.rows , 'categoryCombos ' )
 
   })
-
-  output$n_cc = renderText( cc.rows() )
+  
+  output$n_de = renderText( paste( ds.rows() , de.rows() , cc.rows() , sep ="; ") )
+  # output$n_ds = renderText( ds.rows() )
+  # output$n_cc = renderText( cc.rows() )
   
   dataDictionary = reactive({
 
@@ -270,11 +295,6 @@ data_elements <- function( input, output, session , login_baseurl ) {
     return( dsde )
 
   })
-  
-  
-  conditionalPanel(condition="$('html').hasClass('shiny-busy')",
-                   tags$div("Loading...",id="loadmessage")
-  ) 
   
  
   # download button

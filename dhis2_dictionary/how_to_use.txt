@@ -2,4 +2,10 @@ Use the menu at left to go through each tool.
 
 1. Login Enter the DHIS2 URL, username, and password.
 
+2. Once logged in, click on either 'All Data Elements' tab, or 'Malaria-relevant Data Elements' to develop a draft data dictionary.  
+
+3. The 'Malaria-relevant Data Elements' form provides a data dictionary of likely malaria relevant data elements.  Malaria-relevant elements include those counting malaria cases; total attendees; ANC attendees and IPTp delivier; stocks of RDT, ACT, and SP; and catchment population. You can refine the list by changing the terms to search for, or exclude, on the 'search terms' tab.  
+
+4. Other tabs are under development...
+
 Note: this section, and several of the tools, under development. The current state should be seen as a proof of concept before adding additional functionality.  

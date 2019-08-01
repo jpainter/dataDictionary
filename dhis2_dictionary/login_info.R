@@ -43,13 +43,13 @@ login_info_UI <- function( id ) {
                          
                          inputPanel(
                            
-                           textInput( ns("baseurl") , label = "DHIS2 URL:", NULL ), # "https://play.dhis2.org/2.28/"
+                           textInput( ns("baseurl") , label = "DHIS2 URL:", NULL ), # "https://play.dhis2.org/2.32.1/"
                            
                            textInput( ns("username") , label = "User name:", NULL ), # "admin"
                            
                            passwordInput( ns("password") , label = "Password:", NULL ), # "district"
                            
-                           checkboxInput( ns("demo") , label = "Click to use admin:district credentials with the dhis2 demo", FALSE )
+                           checkboxInput( ns("demo") , label = "Click to use one of the DHIS2 demo instances at https://play.dhis2.org", FALSE )
                          ) , 
                          
                          br() , br() ,
@@ -67,6 +67,7 @@ login_info_UI <- function( id ) {
                          h3( "The table below lists a link to retrieve metadata (not the data) for each DHIS2 attribute.") ,
                          
                          h4("Simply paste the link into a new brower window.  This is the mechanism used to retrieve all the information displayed in this app." ) ,
+                         
                          h4( "Note that the user will need to login into the DHIS2 in order to see the metadata.") ,
                          
                          textOutput( ns('resource_info') ) ,
@@ -88,7 +89,7 @@ login_info <- function( input, output, session ) {
     req( input$demo )
     if ( input$demo ){
       
-      updateTextInput( session, "baseurl" , value = "https://play.dhis2.org/2.28/" )
+      updateTextInput( session, "baseurl" , value = "https://play.dhis2.org/2.30/" )
       updateTextInput( session, "username" , value = "admin" )
       updateTextInput( session, "password" , value = "district" )
     }
@@ -133,24 +134,32 @@ login_info <- function( input, output, session ) {
                 lastAnalyticsTableRuntime ,
                 calendar, dateFormat )
       
-    } else { NULL }
+    } else { 
+      
+      tibble( Connection = "Waiting for login" ) 
+      
+      }
   }) 
   
 
-
+### ouput to Login tab  ####
+  
   output$connection = renderText({  
+    
     req( baseurl() ) 
     # req( login() )
     paste0( baseurl() , "api/system/info" , "  LOGIN:", login() )
+    
   })
   
   conditionalPanel(condition="$('html').hasClass('shiny-busy')",
-                   tags$div("Loading...",id="loadmessage")
+                   tags$div("Loading...", id="loadmessage")
   ) 
   
   output$systemInfo = renderTable(
     
-    if( !is.data.frame( system.info()) & nrow(system.info())>10 ){ data_frame() 
+    if( is.null(system.info()) ){ 
+      
     } else { 
       system.info() 
     }
@@ -158,6 +167,8 @@ login_info <- function( input, output, session ) {
     , striped = TRUE , spacing = 's'
   )
   
+  
+### ouput to Resources tab ####
   
   output$resource_info = renderText({  
     
