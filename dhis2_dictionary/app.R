@@ -19,7 +19,7 @@ pkgTest <- function( package.list = libraries ){
 }
 
 # Test if packages installed
-pkgTest( libraries )
+# pkgTest( libraries )
 
 # load the packages
 suppressMessages( 
