@@ -41,20 +41,47 @@ data_elements_UI <- function( id ) {
   ns <- NS(id)
   
   tagList(
-
-    downloadButton( ns( 'downloadData' ), 'Download') ,
     
     tabsetPanel(type = "tabs",
+                
+ 
                 tabPanel("Data Elements", 
 
-                         textOutput( ns('n_ds') ) ,
-                         tableOutput( ns('n_de') ),
-                         tableOutput( ns('n_cc') )
+                         downloadButton( ns( 'downloadDataElements' ), 'Download dataElements') ,
+
+                         textOutput( ns('n_de') ),
+
+                         DT::dataTableOutput( ns('dataDictionary')  ) ,
                          
-                         )
-    ) ,
-    
-    dataTableOutput( ns('dataDictionary') )
+                         style = "overflow-x: scroll;"
+                         
+                         ) 
+                
+                ,
+
+                tabPanel("Indicators",
+
+                         downloadButton( ns( 'downloadIndicators' ), 'Download Indicators') ,
+
+                         textOutput( ns('n_ind') ) ,
+                         
+                         DT::dataTableOutput( ns('indicators') ) , 
+                         
+                         style = "overflow-x: scroll;"
+
+
+                ) ,
+
+                tabPanel("Datasets",
+
+                         downloadButton( ns( 'downloadDatasets' ), 'Download dataSets') ,
+
+                         textOutput( ns('n_ds') ) ,
+                        
+                         dataTableOutput( ns('dataSets') )
+
+                )
+    ) 
     
   )
 }
@@ -166,16 +193,26 @@ data_elements <- function( input, output, session , login_baseurl ) {
   
   
   categoryOptionCombos = reactive({
+    
+    showModal(modalDialog("Downloading list of categoryOptionCombos", footer=NULL))
+    
+    url<-paste0( baseurl() , "api/categoryOptionCombos.json?fields=:all&paging=false")
+    cols = c( 'id', 'name',  'categoryCombo' )
+    categoryOptionCombos =  get( url )[[1]] %>% select( !!cols ) 
+    
+    return( categoryOptionCombos )
+    
+    removeModal()
+    
+  })
+  
+  categories = reactive({
+    
+    req( categoryOptionCombos() )
 
     if (  login() ){
 
-      showModal(modalDialog("Downloading list of categoryOptionCombos", footer=NULL))
-      
-      # if available, use resources method
-      url<-paste0( baseurl() , "api/categoryOptionCombos.json?fields=:all&paging=false")
-      cols = c( 'id', 'name',  'categoryCombo' )
-      categoryOptionCombos =  get( url )[[1]] %>%
-        select( !!cols ) %>%
+      categoryOptionCombos = categoryOptionCombos() %>%
         rename( categoryOptionCombo.id = id, categoryOptionCombo = name )
 
       coc = map_df( 1:length( categoryOptionCombos$categoryOptionCombo ),
@@ -195,22 +232,165 @@ data_elements <- function( input, output, session , login_baseurl ) {
           Categories = paste( categoryOptionCombo , collapse = ' ;\n '  ) ,
           Category.ids = paste( categoryOptionCombo.id , collapse = ' ;\n '  )
         )
-      
-      removeModal()
-      
+
       return( categories )
 
     } else { "Unable to login to server" }
   })
   
-  # renderTable( categoryOptionCombos() )
+ 
+  indicators = reactive({
+
+    if (  login() ){
+
+      # if available, use resources method
+      url<-paste0( baseurl() ,"api/indicators.json?fields=:all&paging=false")
+      cols = c( 'id', 'name' , 'displayName', 'description' , 'numerator' , 'denominator' ,
+                'annualized'
+      )
+      indicators =  get( url )[[1]] %>% select( !!cols ) 
+
+    } else { "Unable to login to server" }
+  })
   
+  #### translate indicators ####
+  # takes as parameter:
+  # num_denom: the text based formula with ids that we want to translate--substituting labels for ids
+  # id_names: a table listing the id and names of the dataElements and categoryOptionCombos
+  # and returns the formula with labels (surrounded by brackets) instead of ids, without the extra characters
+  
+  # combine table of data elements and category option combos
+  id_names = reactive({
+    
+
+    de = dataElements()  %>% select( id, name )
+
+    coc = categoryOptionCombos()  %>%  select( id, name )
+
+    bind_rows( de , coc )
+
+  })
+  
+  indicator_formula_translator = function( num_denom, id_names ){
+
+
+    ids_between_braces = str_extract_all( num_denom , "\\{.*?\\}" )[[1]] %>% gsub("\\{|\\}", "", .)
+
+    unique_ids = str_split( ids_between_braces , "\\.") %>% unlist %>% unique
+
+    if( is.null( unique_ids ) ) return( num_denom )
+    
+    # lookup table
+    element_names = id_names %>% filter( id %in% unique_ids )
+
+    # when no match with data elem/coc ...
+    if( nrow( element_names ) == 0 ) return( num_denom ) 
+    
+    
+    # replace ids with names
+    for( .x in 1:nrow( element_names ) ){
+      if ( .x ==1 ) text = num_denom
+      text = gsub( element_names[.x, 'id'] ,
+                   paste0( '[' , element_names[.x, 'name'], ']' ) ,
+                   text, fixed = TRUE  )
+    }
+
+    # trim braces and expand space around operators
+    num_names = text %>%
+      gsub( "\\{|\\}|\\#" , "", .) %>%
+      gsub( "\\+" , " + " , . ) %>%
+      gsub( "\\-" , " + " , . )
+
+    return( num_names )
+  }
+  
+  indicators_translated = reactive({ 
+    
+
+    id_names = id_names()
+
+    translated =
+
+      indicators() %>% 
+      
+      # replace formula with id for formulat with labels
+      rename( denominator.ids = denominator, numerator.ids = numerator ) %>%
+
+      mutate(
+
+        numerator =  map_chr( numerator.ids , ~indicator_formula_translator( .x , id_names ) ) ,
+        
+        denominator = map_chr( denominator.ids , ~indicator_formula_translator( .x , id_names ) )
+
+          ) %>%
+      
+      select( name, description,  numerator, denominator, annualized, 
+              id, displayName, numerator.ids , denominator.ids )
+
+    return( translated )
+
+    })
+  
+  dataDictionary = reactive({
+    
+    req( dataElements() )
+    req( dataSets() )
+    req( categories() )
+    req( dataElementGroups() )
+    
+    de = dataElements()
+    ds = dataSets()
+    coc = categories()
+    deg = dataElementGroups()
+    
+    # create matrix of data elements within each dataset
+    # (info comes from dataset table, not data element table)
+    
+    dsde = map_df( 1:length( ds$dataSetElements),
+                   ~map_df( ds$dataSetElements[[.x]],
+                            ~as.matrix(.x) ))
+    
+    dsde = dsde %>%
+      rename( dataElement.id = dataElement ,
+              dataSet.id = dataSet ,
+              categoryCombo.id = categoryCombo ) %>%
+      left_join( de %>% select( -categoryCombo ) ,
+                 by = c('dataElement.id' = 'id' )) %>%
+      rename( dataElement = name ) %>%
+      
+      left_join( ds %>% select( dataSet.id, dataSet
+                                , periodType
+      ) ,
+      by = 'dataSet.id' ) %>%
+      
+      left_join( coc, by = 'categoryCombo.id'  ) %>%
+      
+      left_join( deg , by = 'dataElement.id' )  %>%
+      
+      select( dataSet, dataElement, n_categoryOptions, Categories , dataElementGroup , zeroIsSignificant ,
+              periodType ,
+              dataElement.id, Category.ids , shortName , displayName, displayShortName )  %>%
+      
+      # collapse all muliptle entries for each data element
+      group_by( dataElement.id ) %>%
+      summarise_all(
+        list( ~paste( unique(.) , collapse = ';\n' ) )
+      ) %>%
+      rename( dataSet_Form_Name = dataSet )
+    
+    
+    
+    return( dsde )
+    
+  })
+
+  # Item counts ####  
   
   de.rows = reactive({
     req( dataElements() )
     de = dataElements()
     de.rows = nrow(de)
-    paste( 'There are', de.rows , 'data elements' )
+    paste( de.rows , 'data elements' )
 
   })
 
@@ -230,75 +410,21 @@ data_elements <- function( input, output, session , login_baseurl ) {
 
   })
   
-  output$n_de = renderText( paste( ds.rows() , de.rows() , cc.rows() , sep ="; ") )
-  # output$n_ds = renderText( ds.rows() )
-  # output$n_cc = renderText( cc.rows() )
-  
-  dataDictionary = reactive({
+  ind.rows = reactive({
 
-    req( dataElements() )
-    req( dataSets() )
-    req( categoryOptionCombos() )
-    req( dataElementGroups() )
-
-    de = dataElements()
-    ds = dataSets()
-    coc = categoryOptionCombos()
-    deg = dataElementGroups()
-
-    # create matrix of data elements within each dataset
-    # (info comes from dataset table, not data element table)
-
-    dsde = map_df( 1:length( ds$dataSetElements),
-                   ~map_df( ds$dataSetElements[[.x]],
-                            ~as.matrix(.x) ))
-
-    dsde = dsde %>%
-      rename( dataElement.id = dataElement ,
-              dataSet.id = dataSet ,
-              categoryCombo.id = categoryCombo ) %>%
-      left_join( de %>% select( -categoryCombo ) ,
-                 by = c('dataElement.id' = 'id' )) %>%
-      rename( dataElement = name ) %>%
-
-      left_join( ds %>% select( dataSet.id, dataSet
-                                , periodType
-      ) ,
-      by = 'dataSet.id' ) %>%
-
-      left_join( coc, by = 'categoryCombo.id'  ) %>%
-
-      left_join( deg , by = 'dataElement.id' )  %>%
-
-      select( dataSet, dataElement, n_categoryOptions, Categories , dataElementGroup , zeroIsSignificant ,
-              periodType ,
-              dataElement.id, Category.ids , shortName , displayName, displayShortName )  %>%
-
-      # collapse all muliptle entries for each data element
-      group_by( dataElement.id ) %>%
-      summarise_all(
-        list( ~paste( unique(.) , collapse = ';\n' ) )
-      ) %>%
-      rename( dataSet_Form_Name = dataSet )
-    
-
-
-    # For versions <2.6, need to add categoryCombo
-    # if ( !'categoryCombo' %in% names(dsde) ){
-    #   categoryCombos =  tibble(
-    #     dataSet =ds$dataSet ,
-    #     categoryCombo = ds$categoryCombo$id )
-    #
-    #   dsde = dsde %>% inner_join( cc,  by = "dataSet")
-    # }
-
-    return( dsde )
-
+    req( indicators() )
+    ind.rows = nrow( indicators())
+    paste( ind.rows , 'indicators. ' )
   })
   
+  output$n_de = renderText( de.rows() )
+  output$n_ds = renderText( ds.rows() )
+  output$n_cc = renderText( cc.rows() )
+  output$n_ind = renderText( ind.rows() )
+  
  
-  # download button
-  output$downloadData <- downloadHandler(
+# download buttons ####
+  output$downloadDataElements <- downloadHandler(
     filename = function() { 
       return( paste('dataDictionary', '.csv', sep=''))
       }, 
@@ -306,13 +432,27 @@ data_elements <- function( input, output, session , login_baseurl ) {
       write.csv( dataDictionary() , file)
   }
   )
-  
+
+# output tables ####  
   output$dataDictionary = DT::renderDataTable(
 
-    dataDictionary()
+    dataDictionary() 
 
   )
   
+  output$indicators = DT::renderDataTable(
+    
+    indicators_translated()
+    
+  )
+  
+  output$dataSets = DT::renderDataTable(
+    
+    dataSets()
+    
+  )
+  
+# return ####
   return(  dataDictionary  ) # return reactive expression with data dictionary
     
 }

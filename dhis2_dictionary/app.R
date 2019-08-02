@@ -14,7 +14,7 @@ libraries = as.character(
 # Function to test if package is installed 
 pkgTest <- function( package.list = libraries ){
   
-  missing.packages = setdiff( package.list , rownames(installed.packages()) ) 
+  missing.packages = setdiff( package.list , rownames( installed.packages() ) ) 
   if ( length( missing.packages ) > 0 ) install.packages( missing.packages , dependencies = TRUE ) 
 }
 
@@ -38,11 +38,11 @@ ui <- dashboardPage(
   
   # skin = 'blue',
   dashboardHeader(title = "What's in your DHIS2?",
-                  titleWidth = 300),
+                  titleWidth = 300) ,
   
   #https://shiny.rstudio.com/reference/shiny/1.0.1/icon.html (choose icon)
   dashboardSidebar(
-    sidebarUserPanel("jp"),
+    sidebarUserPanel("jp") ,
     sidebarMenu(
       
       menuItem( 'Background and Directions' , tabName = "info_page", 
@@ -180,14 +180,19 @@ tabItem(tabName = 'contact',
 # Define server logic #####
 server <-  function(input, output, session){
    
-   session$onSessionEnded(stopApp) # stop shiny when browser closes
+  # stop shiny when browser closes
+  session$onSessionEnded(function() {
+    stopApp()
+  })
   
-   login_baseurl = callModule( login_info , "login" ) 
+  # Load modules
   
+   login_baseurl = callModule( login_info , "login" )
+
    data_dictionary = callModule( data_elements , "de" , login_baseurl = login_baseurl )
    
-   malaria_data_elements = callModule( malaria_data_elements , "mde" , 
-                                       data_elements = data_dictionary )
+   malaria_data_elements = callModule( malaria_data_elements , "mde" ,
+                                      data_elements = data_dictionary )
 }
 
 # Run the application 
