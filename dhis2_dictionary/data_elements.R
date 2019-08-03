@@ -453,6 +453,9 @@ data_elements <- function( input, output, session , login_baseurl ) {
   )
   
 # return ####
-  return(  dataDictionary  ) # return reactive expression with data dictionary
+  return(  list( dataDictionary = dataDictionary, 
+                 indicators = indicators_translated ,
+                 datasets = dataSets )  
+           ) # return reactive expression with data dictionary
     
 }

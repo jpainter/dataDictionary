@@ -2,49 +2,57 @@
 
 # takes as input, output of data_elements.R module, and login then filters for malaria key words
 
+malaria_search_words =  as.character( expression( malaria , paludisme, Pf, plasmodium , falciparum, vivax, RDT, TDR, rapid, slide ) ) %>% paste( collapse = ', ')
+malaria_search_strings =  as.character( expression( palu, Pf, plasmodi , micro) ) %>% paste( collapse = ', ')
+
+anc_iptp_search_words =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')
+anc_iptp_search_strings =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')
+
+attendance_search_words =  as.character( expression( attendance , patient, consultation , fever, fievre ) ) %>% paste( collapse = ', ')
+attendance_search_strings =  as.character( expression( attend , consult ) ) %>% paste( collapse = ', ')
+
+chw_search_words =  as.character( expression( imci, iccm, commun, CHW, chd, hsa,  village, VHW ) ) %>% paste( collapse = ', ')
+chw_search_strings =  as.character( expression(  ) ) %>% paste( collapse = ', ')
+
+stock_search_words =  as.character( expression( RDT, TDR,  ACT, ASAQ, AL, APT, SP, fansidar , itn, llin, milda, net ) ) %>% paste( collapse = ', ')
+stock_search_strings =  as.character( expression( artem , lufen , pyr  ) ) %>% paste( collapse = ', ')
+
+death_search_words =  as.character( expression( mortality, death, dece ) ) %>% paste( collapse = ', ')
+death_search_strings =  as.character( expression( mort, dece ) ) %>% paste( collapse = ', ')
+
+population_search_words =  as.character( expression(  population  ) ) %>% paste( collapse = ', ')
+population_search_strings =  as.character( expression(  pop ) ) %>% paste( collapse = ', ')
+
+not_malaria_search_words = as.character( expression( bcg, ART, yellow, polio, rabies, rage, mening, LAL, plague, measles, bite, paralysis , cholera , trauma ) ) %>% paste( collapse = ', ')
+not_malaria_search_strings = as.character( expression( TB, HIV , VIH,  PMTCT, tuberc, malnut, typh, hemorr, lass, tetan, mening, diarr, cesar, urolo , amoxi ) ) %>% paste( collapse = ', ')
+
 # Module UI function  ####
 malaria_data_elements_UI <- function( id ) {
   # Create a namespace function using the provided id
   ns <- NS(id)
   
-  malaria_search_words =  as.character( expression( malaria , paludisme, Pf, plasmodium , falciparum, vivax, RDT, TDR, rapid, slide ) ) %>% paste( collapse = ', ')
-  malaria_search_strings =  as.character( expression( palu, Pf, plasmodi , micro) ) %>% paste( collapse = ', ')
-  
-  anc_iptp_search_words =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')
-  anc_iptp_search_strings =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')
-  
-  attendance_search_words =  as.character( expression( attendance , patient, consultation , fever, fievre ) ) %>% paste( collapse = ', ')
-  attendance_search_strings =  as.character( expression( attend , consult ) ) %>% paste( collapse = ', ')
-  
-  chw_search_words =  as.character( expression( imci, iccm, commun, CHW, chd, hsa,  village, VHW ) ) %>% paste( collapse = ', ')
-  chw_search_strings =  as.character( expression(  ) ) %>% paste( collapse = ', ')
-  
-  stock_search_words =  as.character( expression( RDT, TDR,  ACT, ASAQ, AL, APT, SP, fansidar , itn, llin, milda, net ) ) %>% paste( collapse = ', ')
-  stock_search_strings =  as.character( expression( artem , lufen , pyr  ) ) %>% paste( collapse = ', ')
-  
-  death_search_words =  as.character( expression( mortality, death, dece ) ) %>% paste( collapse = ', ')
-  death_search_strings =  as.character( expression( mort, dece ) ) %>% paste( collapse = ', ')
-  
-  population_search_words =  as.character( expression(  population  ) ) %>% paste( collapse = ', ')
-  population_search_strings =  as.character( expression(  pop ) ) %>% paste( collapse = ', ')
-  
-  not_malaria_search_words = as.character( expression( bcg, ART, yellow, polio, rabies, rage, mening, LAL, plague, measles, bite, paralysis , cholera , trauma ) ) %>% paste( collapse = ', ')
-  not_malaria_search_strings = as.character( expression( TB, HIV , VIH,  PMTCT, tuberc, malnut, typh, hemorr, lass, tetan, mening, diarr, cesar, urolo , amoxi ) ) %>% paste( collapse = ', ')
-  
   tagList(
     
     tabsetPanel(type = "tabs",
  
-                tabPanel( "Malaria Data Dictionary" ,
+                tabPanel( "Malaria-relevant Data Elements" ,
 
+                  textOutput( ns('number_dataElements') ) ,
+                  
+                  downloadButton( ns( 'download_malaria_dataElements' ) , 'Download') ,
+                  
+                  dataTableOutput( ns('malariaDataElements') )
     
-                  textOutput( ns('number_elements') ) ,
-                  
-                  downloadButton( ns( 'download_Malaria_Data' ) , 'Download') ,
-                  
-                  
-                  dataTableOutput( ns('malariaDataDictionary') )
-    
+                ) ,
+                
+                tabPanel( "Malaria-relevant Indicators" ,
+                          
+                          textOutput( ns('number_indicators') ) ,
+                          
+                          downloadButton( ns( 'download_malaria_indicators' ) , 'Download') ,
+                          
+                          dataTableOutput( ns('malariaIndicators') )
+                          
                 ) ,
                 
                 
@@ -113,15 +121,10 @@ malaria_data_elements_UI <- function( id ) {
 # Server function ####
 malaria_data_elements <- function( input, output, session , data_elements ) {
 
+  # data elements
+  de = reactive({ data_elements$dataDictionary() })
 
-  conditionalPanel(condition="$('html').hasClass('shiny-busy')",
-                   tags$div("Loading...",id="loadmessage")
-  )
-
-  de = reactive({ data_elements() })
-
-
-  malariaDataDictionary = reactive({
+  malariaDataElements = reactive({
     
     req( de() )
     
@@ -189,31 +192,98 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
     
   })
   
-  # print number of malaria relevent data elements
-  search.rows = reactive({ 
+  dataElement.rows = reactive({ 
     
-    req( malariaDataDictionary() )
-    mdd.rows = nrow( malariaDataDictionary())
+    req( malariaDataElements() )
+    mdd.rows = nrow( malariaDataElements())
+    paste( 'There are', mdd.rows , '(most likely) malaria relevant data elements' ) 
+  })
+  
+  # indicators
+  ind = reactive({ data_elements$indicators() })
+  
+  # find numerators with a malaria data element in numerator
+
+  indicator_with_malaria_numerator = function( numerator.id, mal.ids  ){
+    
+    ids_between_braces = str_extract_all( numerator.id , "\\{.*?\\}" )[[1]] %>% gsub("\\{|\\}", "", .)
+    
+    unique_ids = str_split( ids_between_braces , "\\.") %>% unlist %>% unique
+
+    # boolean if numerator id in mal.id
+    match = any( unique_ids %in% mal.ids )
+    
+    return( match )
+  }
+  
+  malariaIndicators = reactive({
+    
+    req( ind() )
+    ind = ind() 
+    
+    mal.dataElement.ids = malariaDataElements()$dataElement.id
+    
+    likely.ind = map_lgl( ind$numerator.ids , 
+                          ~indicator_with_malaria_numerator( .x, mal.dataElement.ids) 
+                          )
+    
+    return(  ind[ likely.ind , ] )
+    
+  })
+  
+  indicator.rows = reactive({ 
+    
+    req( ind() )
+    ind.rows = nrow( malariaIndicators() )
+    paste( 'There are', ind.rows , '(most likely) malaria relevant data elements' ) 
+  })
+
+  # Outputs ####
+  
+  # print number of malaria relevent data elements
+  indicator.rows = reactive({ 
+    
+    req( malariaIndicators() )
+    mdd.rows = nrow( malariaIndicators())
     paste( 'There are', mdd.rows , '(most likely) malaria relevant data elements' ) 
   })
   
   
-  output$number_elements  = renderText( search.rows() )
+  output$number_dataElements  = renderText( dataElement.rows() )
   
   # download button
-  output$download_Malaria_Data <- downloadHandler(
+  output$download_malaria_dataElements <- downloadHandler(
     filename = function() { 
-      return( paste('malariaDataDictionary', '.csv', sep=''))
+      return( paste('malariaDataElements', '.csv', sep=''))
     }, 
     content = function(file) {
-      write.csv( malariaDataDictionary() , file)
+      write.csv( malariaDataElements() , file)
     }
   )
   
-
-  output$malariaDataDictionary = DT::renderDataTable( 
+  output$malariaDataElements = DT::renderDataTable( 
     
-    malariaDataDictionary()  , 
+    malariaDataElements()  , 
+    options = list( autoWidth = FALSE , scrollX = TRUE )
+    
+  )
+  
+  
+  output$number_indicators  = renderText( indicator.rows() )
+  
+  # download button
+  output$download_malaria_indicators <- downloadHandler(
+    filename = function() { 
+      return( paste('malariaIndicators', '.csv', sep=''))
+    }, 
+    content = function(file) {
+      write.csv( malariaIndicators() , file)
+    }
+  )
+  
+  output$malariaIndicators = DT::renderDataTable( 
+    
+    malariaIndicators()  , 
     options = list( autoWidth = FALSE , scrollX = TRUE )
     
   )
