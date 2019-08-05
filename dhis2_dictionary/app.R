@@ -192,7 +192,8 @@ server <-  function(input, output, session){
    data_dictionary = callModule( data_elements , "de" , login_baseurl = login_baseurl )
    
    malaria_data_elements = callModule( malaria_data_elements , "mde" ,
-                                      data_elements = data_dictionary )
+                                      data_elements = data_dictionary ,
+                                      dataSets = dataSets )
 }
 
 # Run the application 

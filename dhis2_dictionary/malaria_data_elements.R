@@ -55,6 +55,16 @@ malaria_data_elements_UI <- function( id ) {
                           
                 ) ,
                 
+                tabPanel("Datasets",
+                         
+                         downloadButton( ns( 'downloadDatasets' ), 'Download dataSets') ,
+                         
+                         textOutput( ns('n_ds') ) ,
+                         
+                         dataTableOutput( ns('malariaDataSets') )
+                         
+                ) ,
+                
                 
                 tabPanel( "Malaria-relevant search terms" ,
                           
@@ -119,7 +129,7 @@ malaria_data_elements_UI <- function( id ) {
 )}
 
 # Server function ####
-malaria_data_elements <- function( input, output, session , data_elements ) {
+malaria_data_elements <- function( input, output, session , data_elements , dataSets ) {
 
   # data elements
   de = reactive({ data_elements$dataDictionary() })
@@ -238,6 +248,36 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
     paste( 'There are', ind.rows , '(most likely) malaria relevant data elements' ) 
   })
 
+  
+  malariaDataSets = reactive({
+    
+    req( malariaDataElements() )
+    
+    ds = reactive({ data_elements$dataSets() }) 
+    
+    m_de_ds = malariaDataElements() %>%
+      group_by( dataSet , dataSet.id ) %>%
+      summarise(
+        n_malaria_data_elements = n() 
+      )
+    
+      
+    mds = ds() %>% 
+      select(-dataSetElements ) %>%
+      inner_join( m_de_ds , by = c( 'dataSet' , 'dataSet.id' ))
+    
+    return(  mds )
+    
+  })
+  
+  dataset.rows = reactive({ 
+    
+    req( ind() )
+    ds.rows = nrow( malariaDataSets() )
+    paste( 'There are', ds.rows , '(most likely) malaria relevant data elements' ) 
+  })
+  
+  
   # Outputs ####
   
   # print number of malaria relevent data elements
@@ -261,15 +301,6 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
     }
   )
   
-  output$malariaDataElements = DT::renderDataTable( 
-    
-    malariaDataElements()  , 
-    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
-    rownames = FALSE
-    
-  )
-  
-  
   output$number_indicators  = renderText( indicator.rows() )
   
   # download button
@@ -282,6 +313,27 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
     }
   )
   
+  output$n_ds  = renderText( dataset.rows() )
+  
+  # download button
+  output$download_malaria_indicators <- downloadHandler(
+    filename = function() { 
+      return( paste('malariaDataSets', '.csv', sep=''))
+    }, 
+    content = function(file) {
+      write.csv( malariaDataSets() , file)
+    }
+  )
+  
+  output$malariaDataElements = DT::renderDataTable( 
+    
+    malariaDataElements()  , 
+    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
+    rownames = FALSE
+    
+  )
+  
+  
   output$malariaIndicators = DT::renderDataTable( 
     
     malariaIndicators()   , 
@@ -289,4 +341,13 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
     rownames = FALSE
     
   )
+  
+  output$malariaDataSets = DT::renderDataTable( 
+    
+    malariaDataSets()   , 
+    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
+    rownames = FALSE
+    
+  )
+  
 }

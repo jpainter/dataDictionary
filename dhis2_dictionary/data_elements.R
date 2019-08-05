@@ -158,9 +158,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
 
       # if available, use resources method
       url<-paste0( baseurl() , "api/dataSets.json?fields=:all&paging=false")
-      cols = c( 'id', 'name' , 'dataSetElements'
-                , 'periodType'
-      )
+      cols = c( 'id', 'name' , 'periodType' , 'dataSetElements' )
       dataSets =  get( url )[[1]] %>% select( !!cols ) %>%
         rename( dataSet.id = id, dataSet = name )
 
@@ -459,14 +457,14 @@ data_elements <- function( input, output, session , login_baseurl ) {
   
   output$dataSets = DT::renderDataTable(
     
-    dataSets() , rownames = FALSE
+    dataSets() %>% select(-dataSetElements ) , rownames = FALSE
     
   )
   
 # return ####
   return(  list( dataDictionary = dataDictionary, 
                  indicators = indicators_translated ,
-                 datasets = dataSets )  
+                 dataSets = dataSets )  
            ) # return reactive expression with data dictionary
     
 }
