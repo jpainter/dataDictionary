@@ -107,7 +107,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
       # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
       # if available, use resources method
       url<-paste0( baseurl() ,"api/dataElements.json?fields=:all&paging=false")
-      cols = c( 'id', 'name', 'shortName' , 'displayName', 'displayShortName' , 'categoryCombo' ,
+      cols = c( 'id', 'name', 'shortName' , 'displayName', 'displayShortName' , 
                 'zeroIsSignificant' )
       dataElements =  get( url )[[1]] %>% select( !!cols ) 
       
@@ -180,9 +180,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
       
       # if available, use resources method
       url<-paste0( baseurl() , "api/categoryCombos.json?fields=:all&paging=false")
-      cols = c( 'id', 'name'  )
-      categoryCombos =  get( url )[[1]] %>% select( !!cols ) %>%
-        rename( categoryCombo.id = id, categoryCombo = name )
+      cols = c( 'id', 'name', 'categoryOptionCombos'  )
+      categoryCombos =  get( url )[[1]] %>% select( !!cols ) 
 
       removeModal()
       
@@ -197,7 +196,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
     showModal(modalDialog("Downloading list of categoryOptionCombos", footer=NULL))
     
     url<-paste0( baseurl() , "api/categoryOptionCombos.json?fields=:all&paging=false")
-    cols = c( 'id', 'name',  'categoryCombo' )
+    cols = c( 'id', 'name' )
     categoryOptionCombos =  get( url )[[1]] %>% select( !!cols ) 
     
     return( categoryOptionCombos )
@@ -209,28 +208,35 @@ data_elements <- function( input, output, session , login_baseurl ) {
   categories = reactive({
     
     req( categoryOptionCombos() )
+    req( categoryCombos() )
 
     if (  login() ){
 
-      categoryOptionCombos = categoryOptionCombos() %>%
-        rename( categoryOptionCombo.id = id, categoryOptionCombo = name )
+      # categoryOptionCombos = categoryOptionCombos() %>%
+      #   rename( categoryOptionCombo.id = id, categoryOptionCombo = name )
+      # 
+      # coc = map_df( 1:length( categoryOptionCombos$categoryOptionCombo ),
+      #               ~merge( categoryOptionCombos[.x , 1:2] ,
+      #                       categoryOptionCombos$categoryCombo[.x, ] , all = T
+      #               )
+      # ) %>%
+      #   rename( categoryCombo.id = y )
 
-      coc = map_df( 1:length( categoryOptionCombos$categoryOptionCombo ),
-                    ~merge( categoryOptionCombos[.x , 1:2] ,
-                            categoryOptionCombos$categoryCombo[.x, ] , all = T
-                    )
-      ) %>%
-        rename( categoryCombo.id = y )
-
-
-      categories = coc %>%
-        inner_join( categoryCombos() ,
-                    by = 'categoryCombo.id' ) %>%
+      cc = categoryCombos()
+      coc = categoryOptionCombos()
+      
+      cc.coc = cc %>% select( id, name, categoryOptionCombos ) %>%  
+        rename( categoryCombo.id = id , categoryCombo = name ) %>%
+        unnest( categoryOptionCombos ) %>% 
+        left_join( coc , by = "id" ) %>%
+        rename( categoryOptionCombo.id = id , categoryOptionCombo = name )
+      
+      categories = cc.coc %>%
         group_by( categoryCombo.id, categoryCombo ) %>%
         summarise(
           n_categoryOptions = n() ,
           Categories = paste( categoryOptionCombo , collapse = ' ;\n '  ) ,
-          Category.ids = paste( categoryOptionCombo.id , collapse = ' ;\n '  )
+          categoryOptionCombo.ids = paste( categoryOptionCombo.id , collapse = ' ;\n '  )
         )
 
       return( categories )
@@ -340,7 +346,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
     
     de = dataElements()
     ds = dataSets()
-    coc = categories()
+    cats = categories()
     deg = dataElementGroups()
     
     # create matrix of data elements within each dataset
@@ -349,38 +355,39 @@ data_elements <- function( input, output, session , login_baseurl ) {
     dsde = map_df( 1:length( ds$dataSetElements),
                    ~map_df( ds$dataSetElements[[.x]],
                             ~as.matrix(.x) ))
-    
-    dsde = dsde %>%
+    dictionary = dsde %>%
+      
       rename( dataElement.id = dataElement ,
               dataSet.id = dataSet ,
               categoryCombo.id = categoryCombo ) %>%
-      left_join( de %>% select( -categoryCombo ) ,
-                 by = c('dataElement.id' = 'id' )) %>%
+      
+      left_join( de  , by = c('dataElement.id' = 'id' )
+      ) %>%
+      
       rename( dataElement = name ) %>%
       
-      left_join( ds %>% select( dataSet.id, dataSet
-                                , periodType
-      ) ,
-      by = 'dataSet.id' ) %>%
+      left_join( ds , by = 'dataSet.id' ) %>%
       
-      left_join( coc, by = 'categoryCombo.id'  ) %>%
+      left_join( deg , by = 'dataElement.id' ) %>%
       
-      left_join( deg , by = 'dataElement.id' )  %>%
-      
-      select( dataSet, dataElement, n_categoryOptions, Categories , dataElementGroup , zeroIsSignificant ,
-              periodType ,
-              dataElement.id, Category.ids , shortName , displayName, displayShortName )  %>%
+      left_join( cats  , by = 'categoryCombo.id' ) %>%
       
       # collapse all muliptle entries for each data element
-      group_by( dataElement.id ) %>%
+      group_by( dataElement.id , dataElement ) %>%
+      
       summarise_all(
+        
         list( ~paste( unique(.) , collapse = ';\n' ) )
+        
       ) %>%
-      rename( dataSet_Form_Name = dataSet )
+      
+      # reorder; move ids to end
+      select( -dataElement.id ,-categoryCombo.id , -dataSet.id ,  -dataSetElements ,
+              -shortName, -displayShortName, -zeroIsSignificant , -categoryOptionCombo.ids,
+              zeroIsSignificant , shortName , displayShortName , 
+              dataElement.id , categoryCombo.id , categoryOptionCombo.ids, dataSet.id )
     
-    
-    
-    return( dsde )
+    return( dictionary )
     
   })
 
@@ -436,19 +443,23 @@ data_elements <- function( input, output, session , login_baseurl ) {
 # output tables ####  
   output$dataDictionary = DT::renderDataTable(
 
-    dataDictionary() 
+    dataDictionary()   , 
+    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
+    rownames = FALSE, filter = 'top'
 
   )
   
   output$indicators = DT::renderDataTable(
     
-    indicators_translated()
+    indicators_translated()   , 
+    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
+    rownames = FALSE, filter = 'top'
     
   )
   
   output$dataSets = DT::renderDataTable(
     
-    dataSets()
+    dataSets() , rownames = FALSE
     
   )
   

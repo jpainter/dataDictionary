@@ -264,7 +264,8 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
   output$malariaDataElements = DT::renderDataTable( 
     
     malariaDataElements()  , 
-    options = list( autoWidth = FALSE , scrollX = TRUE )
+    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
+    rownames = FALSE
     
   )
   
@@ -283,8 +284,9 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
   
   output$malariaIndicators = DT::renderDataTable( 
     
-    malariaIndicators()  , 
-    options = list( autoWidth = FALSE , scrollX = TRUE )
+    malariaIndicators()   , 
+    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
+    rownames = FALSE
     
   )
 }

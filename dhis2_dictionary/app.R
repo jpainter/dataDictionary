@@ -52,10 +52,10 @@ ui <- dashboardPage(
       menuItem("Login", 
                tabName = "LOG", icon = icon("chart-line")),
       
-      menuItem("All Data Elements", 
-               tabName = "DE", icon = icon("chart-line")),
+      menuItem("Malaria-relevant Elements", tabName = "MDE", icon = icon("chart-line")) ,
       
-      menuItem("Malaria-relevant Data Elements", tabName = "MDE", icon = icon("chart-line")) ,
+      menuItem("All Elements", 
+               tabName = "DE", icon = icon("chart-line")),
       
       menuItem("Organisational Units", tabName = "OU", icon = icon("map")) ,
       
