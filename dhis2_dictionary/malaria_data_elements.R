@@ -55,7 +55,7 @@ malaria_data_elements_UI <- function( id ) {
                           
                 ) ,
                 
-                tabPanel("Datasets",
+                tabPanel("Malaria-relevant Datasets",
                          
                          downloadButton( ns( 'downloadDatasets' ), 'Download dataSets') ,
                          
@@ -245,7 +245,8 @@ malaria_data_elements <- function( input, output, session , data_elements , data
     
     req( ind() )
     ind.rows = nrow( malariaIndicators() )
-    paste( 'There are', ind.rows , '(most likely) malaria relevant data elements' ) 
+    paste( 'There are', ind.rows , 
+           'indicators derived from one or more of the malaria-relevant data elements' ) 
   })
 
   

@@ -383,6 +383,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
 
   indicators_translated = reactive({
  
+    showModal(modalDialog("Collating indicator information", footer=NULL))
     
     id_names = id_names()
 
@@ -404,6 +405,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
       select( name, description,  numerator, denominator, annualized,
               id, displayName, numerator.ids , denominator.ids )
 
+    removeModal()
+    
     return( translated )
 
     })
