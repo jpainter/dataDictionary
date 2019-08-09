@@ -78,7 +78,7 @@ data_elements_UI <- function( id ) {
 
                          textOutput( ns('n_ds') ) ,
                         
-                         dataTableOutput( ns('dataSets') )
+                         DT::dataTableOutput( ns('dataSets') )
 
                 )
     ) 
@@ -149,7 +149,6 @@ data_elements <- function( input, output, session , login_baseurl ) {
     } else { "Unable to login to server" }
   })
   
-  
   dataSets = reactive({
 
     if (  login() ){
@@ -169,7 +168,6 @@ data_elements <- function( input, output, session , login_baseurl ) {
     } else { "Unable to login to server" }
   })
   
-  
   categoryCombos = reactive({
 
     if (  login() ){
@@ -188,18 +186,21 @@ data_elements <- function( input, output, session , login_baseurl ) {
     } else { "Unable to login to server" }
   })
   
-  
   categoryOptionCombos = reactive({
     
+    if (  login() ){
+      
     showModal(modalDialog("Downloading list of categoryOptionCombos", footer=NULL))
     
     url<-paste0( baseurl() , "api/categoryOptionCombos.json?fields=:all&paging=false")
     cols = c( 'id', 'name' )
     categoryOptionCombos =  get( url )[[1]] %>% select( !!cols ) 
     
+    removeModal()
+    
     return( categoryOptionCombos )
     
-    removeModal()
+    }
     
   })
   
@@ -242,98 +243,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
     } else { "Unable to login to server" }
   })
   
- 
-  indicators = reactive({
-
-    if (  login() ){
-
-      # if available, use resources method
-      url<-paste0( baseurl() ,"api/indicators.json?fields=:all&paging=false")
-      cols = c( 'id', 'name' , 'displayName', 'description' , 'numerator' , 'denominator' ,
-                'annualized'
-      )
-      indicators =  get( url )[[1]] %>% select( !!cols ) 
-
-    } else { "Unable to login to server" }
-  })
-  
-  #### translate indicators ####
-  # takes as parameter:
-  # num_denom: the text based formula with ids that we want to translate--substituting labels for ids
-  # id_names: a table listing the id and names of the dataElements and categoryOptionCombos
-  # and returns the formula with labels (surrounded by brackets) instead of ids, without the extra characters
-  
-  # combine table of data elements and category option combos
-  id_names = reactive({
-    
-
-    de = dataElements()  %>% select( id, name )
-
-    coc = categoryOptionCombos()  %>%  select( id, name )
-
-    bind_rows( de , coc )
-
-  })
-  
-  indicator_formula_translator = function( num_denom, id_names ){
-
-
-    ids_between_braces = str_extract_all( num_denom , "\\{.*?\\}" )[[1]] %>% gsub("\\{|\\}", "", .)
-
-    unique_ids = str_split( ids_between_braces , "\\.") %>% unlist %>% unique
-
-    if( is.null( unique_ids ) ) return( num_denom )
-    
-    # lookup table
-    element_names = id_names %>% filter( id %in% unique_ids )
-
-    # when no match with data elem/coc ...
-    if( nrow( element_names ) == 0 ) return( num_denom ) 
-    
-    
-    # replace ids with names
-    for( .x in 1:nrow( element_names ) ){
-      if ( .x ==1 ) text = num_denom
-      text = gsub( element_names[.x, 'id'] ,
-                   paste0( '[' , element_names[.x, 'name'], ']' ) ,
-                   text, fixed = TRUE  )
-    }
-
-    # trim braces and expand space around operators
-    num_names = text %>%
-      gsub( "\\{|\\}|\\#" , "", .) %>%
-      gsub( "\\+" , " + " , . ) %>%
-      gsub( "\\-" , " + " , . )
-
-    return( num_names )
-  }
-  
-  indicators_translated = reactive({ 
-    
-
-    id_names = id_names()
-
-    translated =
-
-      indicators() %>% 
-      
-      # replace formula with id for formulat with labels
-      rename( denominator.ids = denominator, numerator.ids = numerator ) %>%
-
-      mutate(
-
-        numerator =  map_chr( numerator.ids , ~indicator_formula_translator( .x , id_names ) ) ,
-        
-        denominator = map_chr( denominator.ids , ~indicator_formula_translator( .x , id_names ) )
-
-          ) %>%
-      
-      select( name, description,  numerator, denominator, annualized, 
-              id, displayName, numerator.ids , denominator.ids )
-
-    return( translated )
-
-    })
+ # data elelement table ####
   
   dataDictionary = reactive({
     
@@ -341,6 +251,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
     req( dataSets() )
     req( categories() )
     req( dataElementGroups() )
+    
+    showModal(modalDialog("Collating data element information", footer=NULL))
     
     de = dataElements()
     ds = dataSets()
@@ -354,6 +266,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
                    ~map_df( ds$dataSetElements[[.x]],
                             ~as.matrix(.x) ))
     dictionary = dsde %>%
+      
+      select( dataElement , dataSet ,  categoryCombo ) %>%
       
       rename( dataElement.id = dataElement ,
               dataSet.id = dataSet ,
@@ -385,9 +299,116 @@ data_elements <- function( input, output, session , login_baseurl ) {
               zeroIsSignificant , shortName , displayShortName , 
               dataElement.id , categoryCombo.id , categoryOptionCombo.ids, dataSet.id )
     
+    removeModal()
+    
     return( dictionary )
     
   })
+  
+  #### translate indicators ####
+  
+  indicators = reactive({
+    
+    if (  login() ){
+      
+      showModal(modalDialog("Downloading list of indicators", footer=NULL))
+      
+      # if available, use resources method
+      url<-paste0( baseurl() ,"api/indicators.json?fields=:all&paging=false")
+      
+      cols = c( 'id', 'name', 'displayName', 'description' , 'numerator' , 'denominator' ,
+                'annualized'
+      )
+      
+      indicators =  get( url )[[1]]  %>% select( !!cols ) 
+      
+      removeModal()
+      
+      return( indicators )
+      
+    } else { "Unable to login to server" }
+  })
+  
+  
+  # takes as parameter:
+  # num_denom: the text based formula with ids that we want to translate--substituting labels for ids
+  # id_names: a table listing the id and names of the dataElements and categoryOptionCombos
+  # and returns the formula with labels (surrounded by brackets) instead of ids, without the extra characters
+  
+  # combine table of data elements and category option combos
+  id_names = reactive({
+
+
+    de = dataElements()  %>% select( id, name )
+
+    coc = categoryOptionCombos()  %>%  select( id, name )
+
+    bind_rows( de , coc )
+
+  })
+
+  
+  indicator_formula_translator = function( num_denom, id_names ){
+
+
+    ids_between_braces = str_extract_all( num_denom , "\\{.*?\\}" )[[1]] %>% gsub("\\{|\\}", "", .)
+
+    unique_ids = str_split( ids_between_braces , "\\.") %>% unlist %>% unique
+
+    if( is.null( unique_ids ) ) return( num_denom )
+
+    # lookup table
+    element_names = id_names %>% filter( id %in% unique_ids )
+
+    # when no match with data elem/coc ...
+    if( nrow( element_names ) == 0 ) return( num_denom )
+
+
+    # replace ids with names
+    for( .x in 1:nrow( element_names ) ){
+      if ( .x ==1 ) text = num_denom
+      text = gsub( element_names[.x, 'id'] ,
+                   paste0( '[' , element_names[.x, 'name'], ']' ) ,
+                   text, fixed = TRUE  )
+    }
+
+    # trim braces and expand space around operators
+    num_names = text %>%
+      gsub( "\\{|\\}|\\#" , "", .) %>%
+      gsub( "\\+" , " + " , . ) %>%
+      gsub( "\\-" , " + " , . )
+
+    return( num_names )
+  }
+
+  indicators_translated = reactive({
+ 
+    
+    id_names = id_names()
+
+    translated =
+
+      indicators() %>%
+
+      # replace formula with id for formulat with labels
+      rename( denominator.ids = denominator, numerator.ids = numerator ) %>%
+
+      mutate(
+
+        numerator =  map_chr( numerator.ids , ~indicator_formula_translator( .x , id_names ) ) ,
+
+        denominator = map_chr( denominator.ids , ~indicator_formula_translator( .x , id_names ) )
+
+          ) %>%
+
+      select( name, description,  numerator, denominator, annualized,
+              id, displayName, numerator.ids , denominator.ids )
+
+    return( translated )
+
+    })
+  
+
 
   # Item counts ####  
   
@@ -418,7 +439,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
   ind.rows = reactive({
 
     req( indicators() )
-    ind.rows = nrow( indicators())
+    ind.rows = nrow( indicators() )
     paste( ind.rows , 'indicators. ' )
   })
   
@@ -449,7 +470,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
   
   output$indicators = DT::renderDataTable(
     
-    indicators_translated()   , 
+    indicators_translated()   ,
     options = list( autoWidth = FALSE , scrollX = TRUE ) ,
     rownames = FALSE, filter = 'top'
     
@@ -457,7 +478,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
   
   output$dataSets = DT::renderDataTable(
     
-    dataSets() %>% select(-dataSetElements ) , rownames = FALSE
+    dataSets() %>% select(-dataSetElements ) 
+    , rownames = FALSE
     
   )
   

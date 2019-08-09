@@ -37,11 +37,11 @@ malaria_data_elements_UI <- function( id ) {
  
                 tabPanel( "Malaria-relevant Data Elements" ,
 
-                  textOutput( ns('number_dataElements') ) ,
-                  
-                  downloadButton( ns( 'download_malaria_dataElements' ) , 'Download') ,
-                  
-                  dataTableOutput( ns('malariaDataElements') )
+                          textOutput( ns('number_dataElements') ) ,
+                          
+                          downloadButton( ns( 'download_malaria_dataElements' ) , 'Download') ,
+                          
+                          DT::dataTableOutput( ns('malariaDataElements') )
     
                 ) ,
                 
@@ -51,7 +51,7 @@ malaria_data_elements_UI <- function( id ) {
                           
                           downloadButton( ns( 'download_malaria_indicators' ) , 'Download') ,
                           
-                          dataTableOutput( ns('malariaIndicators') )
+                          DT::dataTableOutput( ns('malariaIndicators') )
                           
                 ) ,
                 
@@ -61,7 +61,7 @@ malaria_data_elements_UI <- function( id ) {
                          
                          textOutput( ns('n_ds') ) ,
                          
-                         dataTableOutput( ns('malariaDataSets') )
+                         DT::dataTableOutput( ns('malariaDataSets') )
                          
                 ) ,
                 
