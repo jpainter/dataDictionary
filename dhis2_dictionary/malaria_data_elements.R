@@ -39,7 +39,7 @@ malaria_data_elements_UI <- function( id ) {
 
                           textOutput( ns('number_dataElements') ) ,
                           
-                          downloadButton( ns( 'download_malaria_dataElements' ) , 'Download') ,
+                          downloadButton( ns( 'download_malaria_dataElements' ) , 'Download data elements') ,
                           
                           DT::dataTableOutput( ns('malariaDataElements') )
     
@@ -49,7 +49,7 @@ malaria_data_elements_UI <- function( id ) {
                           
                           textOutput( ns('number_indicators') ) ,
                           
-                          downloadButton( ns( 'download_malaria_indicators' ) , 'Download') ,
+                          downloadButton( ns( 'download_malaria_indicators' ) , 'Download indicators') ,
                           
                           DT::dataTableOutput( ns('malariaIndicators') )
                           
@@ -57,7 +57,7 @@ malaria_data_elements_UI <- function( id ) {
                 
                 tabPanel("Malaria-relevant Datasets",
                          
-                         downloadButton( ns( 'downloadDatasets' ), 'Download dataSets') ,
+                         downloadButton( ns( 'download_malaria_datasets' ), 'Download dataSets') ,
                          
                          textOutput( ns('n_ds') ) ,
                          
@@ -318,7 +318,7 @@ malaria_data_elements <- function( input, output, session , data_elements , data
   output$n_ds  = renderText( dataset.rows() )
   
   # download button
-  output$download_malaria_indicators <- downloadHandler(
+  output$download_malaria_datasets <- downloadHandler(
     filename = function() { 
       return( paste('malariaDataSets', '.csv', sep=''))
     }, 

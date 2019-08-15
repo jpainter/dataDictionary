@@ -461,6 +461,24 @@ data_elements <- function( input, output, session , login_baseurl ) {
       write.csv( dataDictionary() , file)
   }
   )
+  
+  output$downloadIndicators <- downloadHandler(
+    filename = function() { 
+      return( paste('Indicators', '.csv', sep=''))
+    }, 
+    content = function(file) {
+      write.csv( indicators_translated() , file)
+    }
+  )
+  
+  output$downloadDatasets <- downloadHandler(
+    filename = function() { 
+      return( paste('dataSets', '.csv', sep=''))
+    }, 
+    content = function(file) {
+      write.csv( dataSets() %>% select(-dataSetElements )  , file)
+    }
+  )
 
 # output tables ####  
   output$dataDictionary = DT::renderDataTable(
