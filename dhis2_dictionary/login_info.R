@@ -58,7 +58,9 @@ login_info_UI <- function( id ) {
                          
                          br() , br() ,
                          
-                         tableOutput( ns('systemInfo') )
+                         tableOutput( ns('systemInfo') ) ,
+                         
+                         downloadButton( ns( 'downloadInfo' ), 'Download system info')
                          
                          ) ,
                 
@@ -220,6 +222,15 @@ login_info <- function( input, output, session ) {
     
     striped = TRUE , spacing = 's' 
     
+  )
+  
+  output$downloadInfo <- downloadHandler(
+    filename = function() { 
+      return( paste('info_', baseurl() , '_.csv', sep=''))
+    }, 
+    content = function(file) {
+      write.csv( system.info()  ,  file )
+    }
   )
   
   return( list( login = login , baseurl = baseurl  ) )
