@@ -125,14 +125,33 @@ login_info <- function( input, output, session ) {
       url = paste0( baseurl() , "api/system/info" )
       getInfo = GET( url )
       getInfo.content =  content( getInfo , "text")
-      info =   jsonlite::fromJSON( getInfo.content ) %>% 
+      
+      info =   jsonlite::fromJSON( getInfo.content ) 
+      
+      info[ map_dbl( info , length ) == 1 ] %>% 
         as_tibble() %>%
-        filter( row_number() == 1 ) %>%
-        select( version, buildTime  ,
-                lastAnalyticsTableSuccess ,
-                intervalSinceLastAnalyticsTableSuccess ,
-                lastAnalyticsTableRuntime ,
-                calendar, dateFormat )
+        select( 
+          version , 
+          lastAnalyticsTableSuccess	,
+          intervalSinceLastAnalyticsTableSuccess	,
+          lastAnalyticsTableRuntime ,
+          buildTime ,
+          serverDate ,
+          contextPath  ,
+          calendar ,
+          dateFormat 
+          
+        ) %>% 
+        gather( Attribute, Value ) 
+
+      
+      #   as_tibble() %>%
+      #   filter( row_number() == 1 ) %>%
+      #   select( version, buildTime  ,
+      #           lastAnalyticsTableSuccess ,
+      #           intervalSinceLastAnalyticsTableSuccess ,
+      #           lastAnalyticsTableRuntime ,
+      #           calendar, dateFormat )
       
     } else { 
       
@@ -148,23 +167,22 @@ login_info <- function( input, output, session ) {
     
     req( baseurl() ) 
     # req( login() )
-    paste0( baseurl() , "api/system/info" , "  LOGIN:", login() )
+    paste0( baseurl() , "api/system/info"  )
     
   })
   
-  conditionalPanel(condition="$('html').hasClass('shiny-busy')",
-                   tags$div("Loading...", id="loadmessage")
+  conditionalPanel( condition="$('html').hasClass('shiny-busy')",
+                    tags$div( "Loading...", id="loadmessage" )
   ) 
   
-  output$systemInfo = renderTable(
+  output$systemInfo =  renderTable(
     
     if( is.null(system.info()) ){ 
       
     } else { 
-      system.info() 
+      system.info()
     }
-    
-    , striped = TRUE , spacing = 's'
+  
   )
   
   

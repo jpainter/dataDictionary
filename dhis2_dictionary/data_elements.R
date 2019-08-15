@@ -284,6 +284,12 @@ data_elements <- function( input, output, session , login_baseurl ) {
       
       left_join( cats  , by = 'categoryCombo.id' ) %>%
       
+      # reorder; move ids to end
+      select( -dataElement.id ,-categoryCombo.id , -dataSet.id ,  -dataSetElements ,
+              -shortName, -displayShortName, -zeroIsSignificant , -categoryOptionCombo.ids,
+              zeroIsSignificant , shortName , displayShortName , 
+              dataElement.id , categoryCombo.id , categoryOptionCombo.ids, dataSet.id ) %>%
+      
       # collapse all muliptle entries for each data element
       group_by( dataElement.id , dataElement ) %>%
       
@@ -291,14 +297,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
         
         list( ~paste( unique(.) , collapse = ';\n' ) )
         
-      ) %>%
+      ) 
       
-      # reorder; move ids to end
-      select( -dataElement.id ,-categoryCombo.id , -dataSet.id ,  -dataSetElements ,
-              -shortName, -displayShortName, -zeroIsSignificant , -categoryOptionCombo.ids,
-              zeroIsSignificant , shortName , displayShortName , 
-              dataElement.id , categoryCombo.id , categoryOptionCombo.ids, dataSet.id )
-    
     removeModal()
     
     return( dictionary )
@@ -482,7 +482,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
   output$dataSets = DT::renderDataTable(
     
     dataSets() %>% select(-dataSetElements ) 
-    , rownames = FALSE
+    , rownames = FALSE, filter = 'top'
     
   )
   

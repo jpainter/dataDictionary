@@ -257,6 +257,7 @@ malaria_data_elements <- function( input, output, session , data_elements , data
     ds = reactive({ data_elements$dataSets() }) 
     
     m_de_ds = malariaDataElements() %>%
+      separate_rows( dataSet, dataSet.id , sep = ';' ) %>%
       group_by( dataSet , dataSet.id ) %>%
       summarise(
         n_malaria_data_elements = n() 
@@ -275,7 +276,7 @@ malaria_data_elements <- function( input, output, session , data_elements , data
     
     req( ind() )
     ds.rows = nrow( malariaDataSets() )
-    paste( 'There are', ds.rows , '(most likely) malaria relevant data elements' ) 
+    paste( 'There are', ds.rows , '(most likely) malaria relevant data sets' ) 
   })
   
   
@@ -330,7 +331,7 @@ malaria_data_elements <- function( input, output, session , data_elements , data
     
     malariaDataElements()  , 
     options = list( autoWidth = FALSE , scrollX = TRUE ) ,
-    rownames = FALSE
+    rownames = FALSE, filter = 'top'
     
   )
   
@@ -339,7 +340,7 @@ malaria_data_elements <- function( input, output, session , data_elements , data
     
     malariaIndicators()   , 
     options = list( autoWidth = FALSE , scrollX = TRUE ) ,
-    rownames = FALSE
+    rownames = FALSE, filter = 'top'
     
   )
   
@@ -347,7 +348,7 @@ malaria_data_elements <- function( input, output, session , data_elements , data
     
     malariaDataSets()   , 
     options = list( autoWidth = FALSE , scrollX = TRUE ) ,
-    rownames = FALSE
+    rownames = FALSE, filter = 'top'
     
   )
   
