@@ -18,13 +18,13 @@ stock_search_words =  as.character( expression( RDT, TDR,  ACT, ASAQ, AL, APT, S
 stock_search_strings =  as.character( expression( artem , lufen , pyr  ) ) %>% paste( collapse = ', ')
 
 death_search_words =  as.character( expression( mortality, death, dece ) ) %>% paste( collapse = ', ')
-death_search_strings =  as.character( expression( mort, dece ) ) %>% paste( collapse = ', ')
+death_search_strings =  as.character( expression( mort, death, dece ) ) %>% paste( collapse = ', ')
 
 population_search_words =  as.character( expression(  population  ) ) %>% paste( collapse = ', ')
 population_search_strings =  as.character( expression(  pop ) ) %>% paste( collapse = ', ')
 
 not_malaria_search_words = as.character( expression( bcg, ART, yellow, polio, rabies, rage, mening, LAL, plague, measles, bite, paralysis , cholera , trauma ) ) %>% paste( collapse = ', ')
-not_malaria_search_strings = as.character( expression( TB, HIV , VIH,  PMTCT, tuberc, malnut, typh, hemorr, lass, tetan, mening, diarr, cesar, urolo , amoxi ) ) %>% paste( collapse = ', ')
+not_malaria_search_strings = as.character( expression( TB, HIV , VIH, AIDS, SIDA, PMTCT, tuberc, malnut, typh, hemorr, lass, tetan, mening, diarr, cesar, urolo , amoxi , dentist, Bilharz, intestin) ) %>% paste( collapse = ', ')
 
 # Module UI function  ####
 malaria_data_elements_UI <- function( id ) {
@@ -163,44 +163,72 @@ malaria_data_elements <- function( input, output, session , data_elements , data
     
   }
     
-  # compbine search terms
-  ## malaria search (ms)
-  ms =         c( search_words( attendance_search_words ) ,
-                  search_words( anc_iptp_search_words ) ,
-                  search_words( chw_search_words ) ,
-                  search_words( death_search_words ) ,
-                  search_words( stock_search_words ) ,
-                  search_words( population_search_words ) ,
-                  search_strings( malaria_search_strings ) ,
-                  search_strings( attendance_search_strings ) ,
-                  search_strings( anc_iptp_search_strings ) ,
-                  search_strings( chw_search_strings ) ,
-                  search_strings( death_search_strings ) ,
-                  search_strings( stock_search_strings ) ,
-                  search_strings( population_search_strings ) 
+# Search terms
+
+## Malaria
+  ms_malaria = c( search_words( input$malaria_words ) , 
+                     search_strings( input$malaria_strings ) )
+  malaria_searches = paste( ms_malaria[ !is.na(ms_malaria) ] , 
+                               collapse =  "|" , sep = "|" ) %>% str_trim()
+  malaria = grepl( malaria_searches , de$dataElement , ignore.case = TRUE )
+
+## attendance
+  ms_attendance = c( search_words( input$attendance_words ) , 
+                     search_strings( input$attendance_strings ) )
+  attendance_searches = paste( ms_attendance[ !is.na(ms_attendance) ] , 
+                               collapse =  "|" , sep = "|" ) %>% str_trim()
+  attendance = grepl( attendance_searches , de$dataElement , ignore.case = TRUE )
+  
+## anc_iptp
+  ms_anc_iptp = c( search_words( input$anc_iptp_words ) , 
+                     search_strings( input$anc_iptp_strings ) )
+  anc_iptp_searches = paste( ms_anc_iptp[ !is.na(ms_anc_iptp) ] , 
+                               collapse =  "|" , sep = "|" ) %>% str_trim()
+  anc_iptp = grepl( anc_iptp_searches , de$dataElement , ignore.case = TRUE )
+  
+## chw
+  ms_chw = c( search_words( input$chw_words ) , 
+                   search_strings( input$chw_strings ) )
+  chw_searches = paste( ms_chw[ !is.na(ms_chw) ] , 
+                             collapse =  "|" , sep = "|" ) %>% str_trim()
+  chw = grepl( chw_searches , de$dataElement , ignore.case = TRUE )
+  
+  
+## death
+  ms_death = c( search_words( input$death_words ) , 
+              search_strings( input$death_strings ) )
+  death_searches = paste( ms_death[ !is.na(ms_death) ] , 
+                        collapse =  "|" , sep = "|" ) %>% str_trim()
+  death = grepl( death_searches , de$dataElement , ignore.case = TRUE )
+  
+
+## stock
+  ms_stock = c( search_words( input$stock_words ) , 
+                search_strings( input$stock_strings ) )
+  stock_searches = paste( ms_stock[ !is.na(ms_stock) ] , 
+                          collapse =  "|" , sep = "|" ) %>% str_trim()
+  stock = grepl( stock_searches , de$dataElement , ignore.case = TRUE )
+  
+## population
+  ms_population = c( search_words( input$population_words ) , 
+                search_strings( input$population_strings ) )
+  population_searches = paste( ms_population[ !is.na(ms_population) ] , 
+                          collapse =  "|" , sep = "|" ) %>% str_trim()
+  population = grepl( population_searches , de$dataElement , ignore.case = TRUE )
+  
+
+## not malaria search (nms)
+  nms = c( search_words( input$not_malaria_words ) ,
+           search_strings( input$not_malaria_strings ) 
   )
   
-  ## not malaria search (nms)
-  nms = c( search_words( not_malaria_search_words ) ,
-           search_strings( not_malaria_search_strings ) 
-  )
+  not_malaria_searches =  paste( nms , collapse =  "|" , sep = "|" ) %>% 
+    str_trim()
   
-  malaria_searches = 
-    
-    paste( ms[!is.na(ms)] , collapse =  "|" , sep = "|" ) %>% str_trim()
-  
-  not_malaria_searches = 
-    
-    paste( nms , collapse =  "|" , sep = "|" ) %>% str_trim()
-  
-  
- 
     
     ###  Complete the search ###  
     
-    mal.de = grepl( malaria_searches , 
-                    de$dataElement , 
-                    ignore.case = TRUE )
+    mal.de = malaria | attendance | anc_iptp | chw | death | stock | population 
     
     not.mal.de = grepl( not_malaria_searches , 
                         de$dataElement , 
@@ -209,8 +237,27 @@ malaria_data_elements <- function( input, output, session , data_elements , data
     
     likely.de = mal.de & !not.mal.de
     
-    return(  de[ likely.de , ] )
+    mde = de %>% ungroup %>%
+      mutate( 
+        malaria = malaria ,
+        attendance = attendance ,
+              anc_iptp = anc_iptp ,
+              chw = chw ,
+              death =death ,
+              stock = stock ,
+              population = population 
+              ) %>%
+      filter( likely.de) %>% 
+      gather( "Search" , "value" , malaria , attendance , anc_iptp , chw , death , stock , population ) %>%
+      filter( value == TRUE ) %>% 
+      select( -value ) %>%
+      group_by_at( vars(-Search) ) %>%
+      summarise( Search = paste( Search , collapse = "; " , sep = "; ") ) %>%
+      ungroup
+      
     
+    return(  mde  )
+
   })
   
   dataElement.rows = reactive({ 
