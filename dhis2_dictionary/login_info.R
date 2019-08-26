@@ -91,7 +91,7 @@ login_info <- function( input, output, session ) {
     req( input$demo )
     if ( input$demo ){
       
-      updateTextInput( session, "baseurl" , value = "https://play.dhis2.org/2.30/" )
+      updateTextInput( session, "baseurl" , value = "https://play.dhis2.org/2.32/" )
       updateTextInput( session, "username" , value = "admin" )
       updateTextInput( session, "password" , value = "district" )
     }
@@ -192,9 +192,9 @@ login_info <- function( input, output, session ) {
   
   output$resource_info = renderText({  
     
-    # h1( "- The href column lists a url (e.g. https://play.dhis2.org/2.28/api/categories) that will returns a short list of information for each attribute.")
+    # h1( "- The href column lists a url (e.g. https://play.dhis2.org/2.32/api/categories) that will returns a short list of information for each attribute.")
     # 
-    # h2( "- Appending '?fields=:all&paging=false' (e.g. https://play.dhis2.org/2.28/api/categories?fields=:all&paging=false) to the url will provide all available information for that attribute. ")
+    # h2( "- Appending '?fields=:all&paging=false' (e.g. https://play.dhis2.org/2.32/api/categories?fields=:all&paging=false) to the url will provide all available information for that attribute. ")
   })
   
   

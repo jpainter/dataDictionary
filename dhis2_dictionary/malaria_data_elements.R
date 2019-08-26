@@ -138,67 +138,78 @@ malaria_data_elements <- function( input, output, session , data_elements , data
     
     req( de() )
     
-    mdd = de()
+    de = de()
     
   search_words = function( x ){ 
       
-      str_split( x , ",")[[1]] %>% 
+      s = str_split( x , ",")[[1]] %>% 
         str_trim() %>% 
         paste0( "\\<" , . , "\\>") %>%
         paste0( collapse =  "|")
+    
+    if ( nchar(s) == 0 ) return( NA )
+    return( s )
       
   }
   
   search_strings = function( x ){ 
     
-    str_split( x , ",")[[1]] %>% 
+    s= str_split( x , ",")[[1]] %>% 
       str_trim() %>% 
       paste0( collapse =  "|")
     
+    if ( nchar(s) == 0 ) return( NA )
+    return( s )
+    
   }
     
-    malaria_searches = 
-      
-      paste( search_words( input$malaria_words ) ,
-             search_words( input$attendance_words ) ,
-             search_words( input$anc_iptp_words ) ,
-             search_words( input$chw_words ) ,
-             search_words( input$death_words ) ,
-             search_words( input$stock_words ) ,
-             search_words( input$population_words ) ,
-             
-             search_strings( input$malaria_strings ) ,
-             search_strings( input$attendance_strings ) ,
-             search_strings( input$anc_iptp_strings ) ,
-             search_strings( input$chw_strings ) ,
-             search_strings( input$death_strings ) ,
-             search_strings( input$stock_strings ) ,
-             search_strings( input$population_strings ) ,
-             
-             collapse =  "|" , sep = "|" ) %>% str_trim()
-
-    not_malaria_searches = 
-      
-      paste( search_words( input$not_malaria_words ) ,
-             search_strings( input$not_malaria_strings ) ,
-             
-             collapse =  "|" , sep = "|" ) %>% str_trim()
+  # compbine search terms
+  ## malaria search (ms)
+  ms =         c( search_words( attendance_search_words ) ,
+                  search_words( anc_iptp_search_words ) ,
+                  search_words( chw_search_words ) ,
+                  search_words( death_search_words ) ,
+                  search_words( stock_search_words ) ,
+                  search_words( population_search_words ) ,
+                  search_strings( malaria_search_strings ) ,
+                  search_strings( attendance_search_strings ) ,
+                  search_strings( anc_iptp_search_strings ) ,
+                  search_strings( chw_search_strings ) ,
+                  search_strings( death_search_strings ) ,
+                  search_strings( stock_search_strings ) ,
+                  search_strings( population_search_strings ) 
+  )
+  
+  ## not malaria search (nms)
+  nms = c( search_words( not_malaria_search_words ) ,
+           search_strings( not_malaria_search_strings ) 
+  )
+  
+  malaria_searches = 
     
+    paste( ms[!is.na(ms)] , collapse =  "|" , sep = "|" ) %>% str_trim()
+  
+  not_malaria_searches = 
+    
+    paste( nms , collapse =  "|" , sep = "|" ) %>% str_trim()
+  
+  
+ 
     
     ###  Complete the search ###  
     
     mal.de = grepl( malaria_searches , 
-                    mdd$dataElement , 
+                    de$dataElement , 
                     ignore.case = TRUE )
     
     not.mal.de = grepl( not_malaria_searches , 
-                        mdd$dataElement , 
+                        de$dataElement , 
                         ignore.case = TRUE )
     
     
     likely.de = mal.de & !not.mal.de
     
-    return(  mdd[ likely.de , ] )
+    return(  de[ likely.de , ] )
     
   })
   
