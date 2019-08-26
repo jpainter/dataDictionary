@@ -175,14 +175,14 @@ malaria_data_elements <- function( input, output, session , data_elements , data
              search_strings( input$stock_strings ) ,
              search_strings( input$population_strings ) ,
              
-             collapse =  "|" )
+             collapse =  "|" , sep = "|" ) %>% str_trim()
 
     not_malaria_searches = 
       
       paste( search_words( input$not_malaria_words ) ,
              search_strings( input$not_malaria_strings ) ,
              
-             collapse =  "|" )
+             collapse =  "|" , sep = "|" ) %>% str_trim()
     
     
     ###  Complete the search ###  
