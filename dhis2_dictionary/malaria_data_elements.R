@@ -388,25 +388,37 @@ malaria_data_elements <- function( input, output, session , data_elements , data
   output$malariaDataElements = DT::renderDataTable( 
     
     malariaDataElements()  , 
-    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
-    rownames = FALSE, filter = 'top'
-    
+    options = list( autoWidth = TRUE , scrollX = TRUE  ,
+                    columnDefs = list(
+                      list(className = "nowrap", targets = "_all")
+                    ) 
+      ) , rownames = FALSE, filter = 'top' 
   )
+  # options = list(
+    # columnDefs = list(
+    #   list(className = "nowrap", targets = "_all")
+  #   )
   
   
   output$malariaIndicators = DT::renderDataTable( 
     
     malariaIndicators()   , 
-    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
-    rownames = FALSE, filter = 'top'
+    options = list( autoWidth = TRUE , scrollX = TRUE  ,
+                    columnDefs = list(
+                      list(className = "nowrap", targets = "_all")
+                    ) 
+    ) , rownames = FALSE, filter = 'top' 
     
   )
   
   output$malariaDataSets = DT::renderDataTable( 
     
     malariaDataSets()   , 
-    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
-    rownames = FALSE, filter = 'top'
+    options = list( autoWidth = TRUE , scrollX = FALSE  ,
+                    columnDefs = list(
+                      list(className = "nowrap", targets = "_all")
+                    ) 
+    ) , rownames = FALSE, filter = 'top' 
     
   )
   

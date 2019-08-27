@@ -484,24 +484,33 @@ data_elements <- function( input, output, session , login_baseurl ) {
   output$dataDictionary = DT::renderDataTable(
 
     dataDictionary()   , 
-    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
-    rownames = FALSE, filter = 'top'
+    options = list( autoWidth = TRUE , scrollX = TRUE  ,
+                    columnDefs = list(
+                      list(className = "nowrap", targets = "_all")
+                    ) 
+    ) , rownames = FALSE, filter = 'top' 
 
   )
   
   output$indicators = DT::renderDataTable(
     
     indicators_translated()   ,
-    options = list( autoWidth = FALSE , scrollX = TRUE ) ,
-    rownames = FALSE, filter = 'top'
+    options = list( autoWidth = TRUE , scrollX = TRUE  ,
+                    columnDefs = list(
+                      list(className = "nowrap", targets = "_all")
+                    ) 
+    ) , rownames = FALSE, filter = 'top' 
     
   )
   
   output$dataSets = DT::renderDataTable(
     
-    dataSets() %>% select(-dataSetElements ) 
-    , rownames = FALSE, filter = 'top'
-    
+    dataSets() %>% select(-dataSetElements ) ,
+    options = list( autoWidth = TRUE , scrollX = FALSE  ,
+                    columnDefs = list(
+                      list(className = "nowrap", targets = "_all")
+                    ) 
+    ) , rownames = FALSE, filter = 'top' 
   )
   
 # return ####

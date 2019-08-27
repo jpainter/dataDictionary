@@ -15,8 +15,13 @@ color: #000000 ;
 background-color: #FFFAF0;
 }
 
+/* column widths from https://stackoverflow.com/questions/55208855/how-to-set-column-width-in-r-shiny-data-table */
+.nowrap {
+  white-space: nowrap;
+}
+
 /* navbar (rest of the header) */
-        .skin-blue .main-header .navbar {
+.skin-blue .main-header .navbar {
                               background-color: #FFFAF0;
                               color: #000000 ;
                               } 
