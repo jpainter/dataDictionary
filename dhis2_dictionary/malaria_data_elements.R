@@ -17,8 +17,8 @@ chw_search_strings =  as.character( expression(  ) ) %>% paste( collapse = ', ')
 stock_search_words =  as.character( expression( RDT, TDR,  ACT, ASAQ, AL, APT, SP, fansidar , itn, llin, milda, net ) ) %>% paste( collapse = ', ')
 stock_search_strings =  as.character( expression( artem , lufen , pyr  ) ) %>% paste( collapse = ', ')
 
-death_search_words =  as.character( expression( mortality, death, dÃ©cÃ©s ) ) %>% paste( collapse = ', ')
-death_search_strings =  as.character( expression( mort, death, dÃ©cÃ© ) ) %>% paste( collapse = ', ')
+death_search_words =  as.character( expression( mortality, death, décés ) ) %>% paste( collapse = ', ')
+death_search_strings =  as.character( expression( mort, death, décé ) ) %>% paste( collapse = ', ')
 
 population_search_words =  as.character( expression(  population  ) ) %>% paste( collapse = ', ')
 population_search_strings =  as.character( expression(  pop ) ) %>% paste( collapse = ', ')
@@ -39,9 +39,9 @@ malaria_data_elements_UI <- function( id ) {
 
                           textOutput( ns('number_dataElements') ) ,
                           
-                          downloadButton( ns( 'download_malaria_dataElements' ) , 'Download data elements') ,
+                          # downloadButton( ns( 'download_malaria_dataElements' ) , 'Download data elements') ,
                           
-                          DT::dataTableOutput( ns('malariaDataElements') )
+                          DTOutput( ns('malariaDataElements') )
     
                 ) ,
                 
@@ -49,19 +49,19 @@ malaria_data_elements_UI <- function( id ) {
                           
                           textOutput( ns('number_indicators') ) ,
                           
-                          downloadButton( ns( 'download_malaria_indicators' ) , 'Download indicators') ,
+                          # downloadButton( ns( 'download_malaria_indicators' ) , 'Download indicators') ,
                           
-                          DT::dataTableOutput( ns('malariaIndicators') )
+                          DTOutput( ns('malariaIndicators') )
                           
                 ) ,
                 
                 tabPanel("Malaria-relevant Datasets",
                          
-                         downloadButton( ns( 'download_malaria_datasets' ), 'Download dataSets') ,
+                         # downloadButton( ns( 'download_malaria_datasets' ), 'Download dataSets') ,
                          
                          textOutput( ns('n_ds') ) ,
                          
-                         DT::dataTableOutput( ns('malariaDataSets') )
+                         DTOutput( ns('malariaDataSets') )
                          
                 ) ,
                 
@@ -350,76 +350,56 @@ malaria_data_elements <- function( input, output, session , data_elements , data
   
   
   output$number_dataElements  = renderText( dataElement.rows() )
-  
-  # download button
-  output$download_malaria_dataElements <- downloadHandler(
-    filename = function() { 
-      return( paste('malariaDataElements', '.csv', sep=''))
-    }, 
-    content = function(file) {
-      write.csv( malariaDataElements() , file)
-    }
-  )
-  
+
   output$number_indicators  = renderText( indicator.rows() )
-  
-  # download button
-  output$download_malaria_indicators <- downloadHandler(
-    filename = function() { 
-      return( paste('malariaIndicators', '.csv', sep=''))
-    }, 
-    content = function(file) {
-      write.csv( malariaIndicators() , file)
-    }
-  )
   
   output$n_ds  = renderText( dataset.rows() )
   
-  # download button
-  output$download_malaria_datasets <- downloadHandler(
-    filename = function() { 
-      return( paste('malariaDataSets', '.csv', sep=''))
-    }, 
-    content = function(file) {
-      write.csv( malariaDataSets() , file)
-    }
-  )
-  
+
   output$malariaDataElements = DT::renderDataTable( 
     
     malariaDataElements()  , 
-    options = list( autoWidth = TRUE , scrollX = TRUE  ,
-                    columnDefs = list(
-                      list(className = "nowrap", targets = "_all")
-                    ) 
-      ) , rownames = FALSE, filter = 'top' 
+    
+    rownames = FALSE, 
+    filter = 'top' ,
+    extensions = 'Buttons' , 
+    
+    options = list( autoWidth = TRUE , 
+                    scrollX = TRUE  ,
+                    dom = 'Bfrtip',
+                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+    ) 
   )
-  # options = list(
-    # columnDefs = list(
-    #   list(className = "nowrap", targets = "_all")
-  #   )
   
   
   output$malariaIndicators = DT::renderDataTable( 
     
     malariaIndicators()   , 
-    options = list( autoWidth = TRUE , scrollX = TRUE  ,
-                    columnDefs = list(
-                      list(className = "nowrap", targets = "_all")
-                    ) 
-    ) , rownames = FALSE, filter = 'top' 
     
+    rownames = FALSE, 
+    filter = 'top' ,
+    extensions = 'Buttons' , 
+    
+    options = list( autoWidth = TRUE , 
+                    scrollX = TRUE  ,
+                    dom = 'Bfrtip',
+                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+                    ) 
   )
   
-  output$malariaDataSets = DT::renderDataTable( 
+  output$malariaDataSets = renderDT( 
     
     malariaDataSets()   , 
-    options = list( autoWidth = TRUE , scrollX = FALSE  ,
-                    columnDefs = list(
-                      list(className = "nowrap", targets = "_all")
-                    ) 
-    ) , rownames = FALSE, filter = 'top' 
     
+    rownames = FALSE, 
+    filter = 'top' ,
+    extensions = 'Buttons' , 
+    
+    options = list( autoWidth = TRUE , 
+                    scrollX = TRUE  ,
+                    dom = 'Bfrtip',
+                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+    ) 
   )
   
 }

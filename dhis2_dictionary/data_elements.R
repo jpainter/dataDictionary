@@ -47,11 +47,9 @@ data_elements_UI <- function( id ) {
  
                 tabPanel("Data Elements", 
 
-                         downloadButton( ns( 'downloadDataElements' ), 'Download dataElements') ,
-
                          textOutput( ns('n_de') ),
 
-                         DT::dataTableOutput( ns('dataDictionary')  ) ,
+                         DTOutput( ns('dataDictionary')  ) ,
                          
                          style = "overflow-x: scroll;"
                          
@@ -61,11 +59,9 @@ data_elements_UI <- function( id ) {
 
                 tabPanel("Indicators",
 
-                         downloadButton( ns( 'downloadIndicators' ), 'Download Indicators') ,
-
                          textOutput( ns('n_ind') ) ,
                          
-                         DT::dataTableOutput( ns('indicators') ) , 
+                         DTOutput( ns('indicators') ) , 
                          
                          style = "overflow-x: scroll;"
 
@@ -74,11 +70,9 @@ data_elements_UI <- function( id ) {
 
                 tabPanel("Datasets",
 
-                         downloadButton( ns( 'downloadDatasets' ), 'Download dataSets') ,
-
                          textOutput( ns('n_ds') ) ,
                         
-                         DT::dataTableOutput( ns('dataSets') )
+                         DTOutput( ns('dataSets') )
 
                 )
     ) 
@@ -452,65 +446,50 @@ data_elements <- function( input, output, session , login_baseurl ) {
   output$n_ind = renderText( ind.rows() )
   
  
-# download buttons ####
-  output$downloadDataElements <- downloadHandler(
-    filename = function() { 
-      return( paste('dataDictionary', '.csv', sep=''))
-      }, 
-    content = function(file) {
-      write.csv( dataDictionary() , file)
-  }
-  )
-  
-  output$downloadIndicators <- downloadHandler(
-    filename = function() { 
-      return( paste('Indicators', '.csv', sep=''))
-    }, 
-    content = function(file) {
-      write.csv( indicators_translated() , file)
-    }
-  )
-  
-  output$downloadDatasets <- downloadHandler(
-    filename = function() { 
-      return( paste('dataSets', '.csv', sep=''))
-    }, 
-    content = function(file) {
-      write.csv( dataSets() %>% select(-dataSetElements )  , file)
-    }
-  )
-
 # output tables ####  
-  output$dataDictionary = DT::renderDataTable(
+  output$dataDictionary = renderDT(
 
     dataDictionary()   , 
-    options = list( autoWidth = TRUE , scrollX = TRUE  ,
-                    columnDefs = list(
-                      list(className = "nowrap", targets = "_all")
-                    ) 
-    ) , rownames = FALSE, filter = 'top' 
-
+    
+    rownames = FALSE, 
+    filter = 'top' ,
+    extensions = 'Buttons' , 
+    
+    options = list( autoWidth = TRUE , 
+                    scrollX = TRUE  ,
+                    dom = 'Bfrtip',
+                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+    ) 
   )
   
-  output$indicators = DT::renderDataTable(
+  output$indicators = renderDT(
     
     indicators_translated()   ,
-    options = list( autoWidth = TRUE , scrollX = TRUE  ,
-                    columnDefs = list(
-                      list(className = "nowrap", targets = "_all")
-                    ) 
-    ) , rownames = FALSE, filter = 'top' 
     
+    rownames = FALSE, 
+    filter = 'top' ,
+    extensions = 'Buttons' , 
+    
+    options = list( autoWidth = TRUE , 
+                    scrollX = TRUE  ,
+                    dom = 'Bfrtip',
+                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+    ) 
   )
   
-  output$dataSets = DT::renderDataTable(
+  output$dataSets = renderDT(
     
     dataSets() %>% select(-dataSetElements ) ,
-    options = list( autoWidth = TRUE , scrollX = FALSE  ,
-                    columnDefs = list(
-                      list(className = "nowrap", targets = "_all")
-                    ) 
-    ) , rownames = FALSE, filter = 'top' 
+    
+    rownames = FALSE, 
+    filter = 'top' ,
+    extensions = 'Buttons' , 
+    
+    options = list( autoWidth = TRUE , 
+                    scrollX = TRUE  ,
+                    dom = 'Bfrtip',
+                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+    ) 
   )
   
 # return ####
