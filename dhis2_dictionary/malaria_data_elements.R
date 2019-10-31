@@ -17,8 +17,8 @@ chw_search_strings =  as.character( expression(  ) ) %>% paste( collapse = ', ')
 stock_search_words =  as.character( expression( RDT, TDR,  ACT, ASAQ, AL, APT, SP, fansidar , itn, llin, milda, net ) ) %>% paste( collapse = ', ')
 stock_search_strings =  as.character( expression( artem , lufen , pyr  ) ) %>% paste( collapse = ', ')
 
-death_search_words =  as.character( expression( mortality, death, décés ) ) %>% paste( collapse = ', ')
-death_search_strings =  as.character( expression( mort, death, décé ) ) %>% paste( collapse = ', ')
+death_search_words =  as.character( expression( mortality, death, dÃ©cÃ©s ) ) %>% paste( collapse = ', ')
+death_search_strings =  as.character( expression( mort, death, dÃ©cÃ© ) ) %>% paste( collapse = ', ')
 
 population_search_words =  as.character( expression(  population  ) ) %>% paste( collapse = ', ')
 population_search_strings =  as.character( expression(  pop ) ) %>% paste( collapse = ', ')
