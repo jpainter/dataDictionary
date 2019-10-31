@@ -2,8 +2,8 @@
 
 # takes as input, output of data_elements.R module, and login then filters for malaria key words
 
-malaria_search_words =  as.character( expression( malaria , paludisme, Pf, plasmodium , falciparum, vivax, RDT, TDR, rapid, slide ) ) %>% paste( collapse = ', ')
-malaria_search_strings =  as.character( expression( palu, Pf, plasmodi , micro) ) %>% paste( collapse = ', ')
+malaria_search_words =  as.character( expression( malaria , paludisme, Pf, plasmodium , falciparum, vivax, RDT, TDR, rapid, slide, goutte ) ) %>% paste( collapse = ', ')
+malaria_search_strings =  as.character( expression( palu, Pf, plasmodi , micro , rapid) ) %>% paste( collapse = ', ')
 
 anc_iptp_search_words =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')
 anc_iptp_search_strings =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')
@@ -17,8 +17,8 @@ chw_search_strings =  as.character( expression(  ) ) %>% paste( collapse = ', ')
 stock_search_words =  as.character( expression( RDT, TDR,  ACT, ASAQ, AL, APT, SP, fansidar , itn, llin, milda, net ) ) %>% paste( collapse = ', ')
 stock_search_strings =  as.character( expression( artem , lufen , pyr  ) ) %>% paste( collapse = ', ')
 
-death_search_words =  as.character( expression( mortality, death, dece ) ) %>% paste( collapse = ', ')
-death_search_strings =  as.character( expression( mort, death, dece ) ) %>% paste( collapse = ', ')
+death_search_words =  as.character( expression( mortality, death, décés ) ) %>% paste( collapse = ', ')
+death_search_strings =  as.character( expression( mort, death, décé ) ) %>% paste( collapse = ', ')
 
 population_search_words =  as.character( expression(  population  ) ) %>% paste( collapse = ', ')
 population_search_strings =  as.character( expression(  pop ) ) %>% paste( collapse = ', ')

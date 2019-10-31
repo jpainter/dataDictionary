@@ -43,7 +43,7 @@ login_info_UI <- function( id ) {
                          
                          inputPanel(
                            
-                           textInput( ns("baseurl") , label = "DHIS2 URL:", NULL ), # "https://play.dhis2.org/2.32.1/"
+                           textInput( ns("baseurl") , label = "DHIS2 URL:", NULL ), # "https://play.dhis2.org/2.33.1/"
                            
                            textInput( ns("username") , label = "User name:", NULL ), # "admin"
                            
@@ -91,7 +91,7 @@ login_info <- function( input, output, session ) {
     req( input$demo )
     if ( input$demo ){
       
-      updateTextInput( session, "baseurl" , value = "https://play.dhis2.org/2.32/" )
+      updateTextInput( session, "baseurl" , value = "https://play.dhis2.org/2.33/" )
       updateTextInput( session, "username" , value = "admin" )
       updateTextInput( session, "password" , value = "district" )
     }
