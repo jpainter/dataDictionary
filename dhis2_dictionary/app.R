@@ -47,6 +47,7 @@ library( DT )
 source( 'login_info.R' )
 source( 'data_elements.R' )
 source( 'malaria_data_elements.R' )
+source( 'malaria_data_formulas.R' )
 
 # setup ####
 
@@ -70,6 +71,8 @@ ui <- dashboardPage(
                tabName = "LOG", icon = icon("chart-line")),
       
       menuItem("Malaria-relevant Elements", tabName = "MDE", icon = icon("chart-line")) ,
+      
+      menuItem("Malaria Data Formulas", tabName = "formulas", icon = icon("chart-line")) ,
       
       menuItem("All Elements", 
                tabName = "DE", icon = icon("chart-line")),
@@ -142,6 +145,13 @@ tabItem( tabName = 'LOG',
     )
     ,
 
+## Malaria Data Formulas Tab ####
+tabItem( tabName = 'formulas' ,  
+         
+         malaria_data_formulas_UI( "formulas" )
+)
+,
+
 ## Organisational Units Tab ####
       tabItem(tabName = 'OU',
               fluidRow(
@@ -209,6 +219,10 @@ server <-  function(input, output, session){
    data_dictionary = callModule( data_elements , "de" , login_baseurl = login_baseurl )
    
    malaria_data_elements = callModule( malaria_data_elements , "mde" ,
+                                      data_elements = data_dictionary ,
+                                      dataSets = dataSets )
+   
+  malaria_data_formulas = callModule( malaria_data_formulas , "formulas" ,
                                       data_elements = data_dictionary ,
                                       dataSets = dataSets )
 }
