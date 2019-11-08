@@ -28,6 +28,7 @@
 
 library( shiny ) 
 library( shinydashboard ) 
+library( shinyBS ) 
 # library( plotly )  
 library( tidyverse )
 # library( googleVis )
@@ -54,6 +55,8 @@ source( 'malaria_data_formulas.R' )
 # Define UI #####
 ui <- dashboardPage(
   
+  # useShinyalert(),  # Set up shinyalert
+  
   # skin = 'blue',
   dashboardHeader(title = "What's in your DHIS2?",
                   titleWidth = 300) ,
@@ -68,7 +71,7 @@ ui <- dashboardPage(
                ),
       
       menuItem("Login", 
-               tabName = "LOG", icon = icon("chart-line")),
+               tabName = "LOG", icon = icon("chart-line")) ,
       
       menuItem("Malaria-relevant Elements", tabName = "MDE", icon = icon("chart-line")) ,
       
@@ -219,12 +222,10 @@ server <-  function(input, output, session){
    data_dictionary = callModule( data_elements , "de" , login_baseurl = login_baseurl )
    
    malaria_data_elements = callModule( malaria_data_elements , "mde" ,
-                                      data_elements = data_dictionary ,
-                                      dataSets = dataSets )
+                                      data_elements = data_dictionary )
    
   malaria_data_formulas = callModule( malaria_data_formulas , "formulas" ,
-                                      data_elements = data_dictionary ,
-                                      dataSets = dataSets )
+                                      malariaDataElements = malaria_data_elements )
 }
 
 # Run the application 
