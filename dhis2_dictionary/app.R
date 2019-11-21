@@ -29,6 +29,7 @@
 library( shiny ) 
 library( shinydashboard ) 
 library( shinyBS ) 
+library( shinyLP )
 # library( plotly )  
 library( tidyverse )
 # library( googleVis )
@@ -42,6 +43,7 @@ library( httr )
 library( curl ) 
 library( assertthat ) 
 library( DT )
+library( textutils )
 
 
 # load modules ####
@@ -224,8 +226,9 @@ server <-  function(input, output, session){
    malaria_data_elements = callModule( malaria_data_elements , "mde" ,
                                       data_elements = data_dictionary )
    
-  malaria_data_formulas = callModule( malaria_data_formulas , "formulas" ,
-                                      malariaDataElements = malaria_data_elements )
+   malaria_data_formulas = callModule( malaria_data_formulas , "formulas" ,
+                                      malariaDataElements = malaria_data_elements ,
+                                      login_baseurl = login_baseurl )
 }
 
 # Run the application 
