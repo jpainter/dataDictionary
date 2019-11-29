@@ -1,16 +1,14 @@
 
 # API Data Calls ####
 
-library( knitrProgressBar )
-
 # Retry function to use when querying database
 # borrowed from: https://stackoverflow.com/questions/20770497/how-to-retry-a-statement-on-error
 
-library(futile.logger)
-library(utils)
+# library(futile.logger)
+# library(utils)
 
 retry <- function( expr, isError=function(x) "try-error" %in% class(x), 
-                  maxErrors=3, sleep=1) {
+                  maxErrors = 3, sleep = 1) {
   attempts = 0
   retval = try( eval(expr) )
   
@@ -31,8 +29,9 @@ retry <- function( expr, isError=function(x) "try-error" %in% class(x),
     
     if (sleep > 0) Sys.sleep(sleep)
     
-    retval = try(eval(expr))
+    retval = try( eval(expr) )
   }
+  
   return(retval)
 }
 
@@ -47,9 +46,12 @@ get = function( source_url , .print = TRUE , ...){
   
   from_url =  GET( source_url ) 
   
-  if ( from_url$status_code != 200 ) return( FALSE )
-  
   get_content = content( from_url , "text")
+  
+  if ( from_url$status_code != 200 ){
+    showModal( modalDialog( get_content[[1]] ) )
+    return( get_content[[1]] )
+  } 
   
   # test if return valid content
   is.json = validate( get_content )

@@ -42,12 +42,18 @@ library( jsonlite )
 library( httr )
 library( curl ) 
 library( assertthat ) 
+library( knitrProgressBar )
+library(futile.logger)
+library(utils)
 library( DT )
 library( textutils )
+library( readxl )
+library( openxlsx  )
 
 
 # load modules ####
 source( 'login_info.R' )
+source( 'orgUnits.R' )
 source( 'data_elements.R' )
 source( 'malaria_data_elements.R' )
 source( 'malaria_data_formulas.R' )
@@ -72,23 +78,21 @@ ui <- dashboardPage(
                icon = icon("fa-book-reader")
                ),
       
-      menuItem("Login", 
-               tabName = "LOG", icon = icon("chart-line")) ,
+      menuItem("Login", tabName = "LOG", icon = icon("chart-line")) ,
+      
+      menuItem("Organisational Units", tabName = "OU", icon = icon("map")) ,
       
       menuItem("Malaria-relevant Elements", tabName = "MDE", icon = icon("chart-line")) ,
       
       menuItem("Malaria Data Formulas", tabName = "formulas", icon = icon("chart-line")) ,
       
-      menuItem("All Elements", 
-               tabName = "DE", icon = icon("chart-line")),
+      menuItem("All Elements", tabName = "DE", icon = icon("chart-line")),
       
-      menuItem("Organisational Units", tabName = "OU", icon = icon("map")) ,
+      menuItem("Reporting Rates", tabName = "RR", icon = icon("chart-line")) ,
       
-      menuItem("Reporting Rates", tabName = "OU", icon = icon("chart-line")) ,
+      menuItem("Data Quality", tabName = "DQ", icon = icon("chart-line")) ,
       
-      menuItem("Data Quality", tabName = "OU", icon = icon("chart-line")) ,
-      
-      menuItem("Estimates and Trends", tabName = "OU", icon = icon("chart-line")) ,
+      menuItem("Estimates and Trends", tabName = "ET", icon = icon("chart-line")) ,
       
       menuItem("Contact", tabName = "contact", icon = icon("help")) 
     )
@@ -158,27 +162,10 @@ tabItem( tabName = 'formulas' ,
 ,
 
 ## Organisational Units Tab ####
-      tabItem(tabName = 'OU',
-              fluidRow(
-                column(
-                  width = 6,
-                  box(
-                    title = strong('Administrative units and health facilities'),
-                    solidHeader = T,
-                    width = NULL,
-                    HTML(paste(h4("" )
-                    ))
-                  )),
-                column(
-                  width = 6,
-                  align = 'center',
-                  box(
-                    # background = "black",
-                    width = NULL
-                    # , img(src = 'beer.jpg', width = "100%", align = "center")
-                  )
-                )
-              )) ,
+tabItem(tabName = 'OU',
+        
+              orgUnits_UI( "ou" )
+              ) ,
 
 ## Contact Tab ####
 tabItem(tabName = 'contact',
@@ -220,6 +207,8 @@ server <-  function(input, output, session){
   # Load modules
   
    login_baseurl = callModule( login_info , "login" )
+   
+   orgUnits = callModule( org_units , "ou" , login_baseurl = login_baseurl )
 
    data_dictionary = callModule( data_elements , "de" , login_baseurl = login_baseurl )
    
@@ -229,6 +218,7 @@ server <-  function(input, output, session){
    malaria_data_formulas = callModule( malaria_data_formulas , "formulas" ,
                                       malariaDataElements = malaria_data_elements ,
                                       login_baseurl = login_baseurl )
+   
 }
 
 # Run the application 
