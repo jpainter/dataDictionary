@@ -1,12 +1,21 @@
 
 # API Data Calls ####
 
+# Login ####
+loginDHIS2<-function( baseurl, username, password) {
+  
+  url<-paste0( baseurl, "api/me" )
+  
+  r <-  GET( url, authenticate(username, password) ) 
+  
+  assert_that( r$status_code == 200L ) 
+}
+
 # Retry function to use when querying database
 # borrowed from: https://stackoverflow.com/questions/20770497/how-to-retry-a-statement-on-error
 
 # library(futile.logger)
 # library(utils)
-
 retry <- function( expr, isError=function(x) "try-error" %in% class(x), 
                   maxErrors = 3, sleep = 1) {
   attempts = 0

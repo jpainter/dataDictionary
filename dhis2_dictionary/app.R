@@ -52,6 +52,7 @@ library( openxlsx  )
 
 
 # load modules ####
+source( 'API.r' )
 source( 'login_info.R' )
 source( 'orgUnits.R' )
 source( 'data_elements.R' )
