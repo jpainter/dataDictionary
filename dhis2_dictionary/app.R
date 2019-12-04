@@ -47,7 +47,7 @@ library( assertthat )
 library(utils)
 library( DT )
 
-if ( sum( c('textutils' , 'readxl' , 'openxlsx') %in% installed.packages()[,1] ) !=3 ) install.packages( 'textutils' , 'readxl' , 'openxlsx' )
+if ( sum( c('textutils' , 'readxl' , 'openxlsx') %in% installed.packages()[,1] ) !=3 ) install.packages( c('textutils' , 'readxl' , 'openxlsx' )  )
 library( textutils )
 library( readxl )
 library( openxlsx  )
