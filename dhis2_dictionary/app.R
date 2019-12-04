@@ -105,9 +105,9 @@ ui <- dashboardPage(
   dashboardBody(
     
   # custom CSS
-    tags$head(
-      tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
-    ) ,
+    # tags$head(
+    #   tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+    # ) ,
     
     tabItems(
       
