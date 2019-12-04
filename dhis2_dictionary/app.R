@@ -26,7 +26,7 @@
 #   lapply( libraries , require  , character.only = TRUE) 
 # )
 
-if ( sum( c('shinyBS' , 'shinyLP' , 'textutils' , 'openxlsx') %in% installed.packages()[,1] ) !=4 ) install.packages( c('textutils' , 'readxl' , 'openxlsx' )  )
+if ( sum( c('shinyBS' , 'shinyLP' , 'textutils' , 'openxlsx') %in% installed.packages()[,1] ) !=4 ) install.packages( c('shinyBS' , 'shinyLP' , 'textutils' ,  'openxlsx' )  )
 
 library( shiny ) 
 library( shinydashboard ) 
