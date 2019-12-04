@@ -586,7 +586,8 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   metadata = reactive({  tibble(
     `Formula Name` = input$formulaName ,
     Period = input$period ,
-    `Organization Unit Levels` = input$orgUnits
+    `Organization Unit Levels` = input$orgUnits ,
+    Downloaded = Sys.Date()
   )
 })
 
