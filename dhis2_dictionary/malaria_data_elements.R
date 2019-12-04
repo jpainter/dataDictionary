@@ -17,8 +17,8 @@ chw_search_strings =  as.character( expression(  ) ) %>% paste( collapse = ', ')
 stock_search_words =  as.character( expression( RDT, TDR,  ACT, ASAQ, AL, APT, SP, fansidar , itn, llin, milda, net ) ) %>% paste( collapse = ', ')
 stock_search_strings =  as.character( expression( artem , lufen , pyr  ) ) %>% paste( collapse = ', ')
 
-death_search_words =  as.character( expression( mortality, death, décés ) ) %>% paste( collapse = ', ')
-death_search_strings =  as.character( expression( mort, death, décé ) ) %>% paste( collapse = ', ')
+death_search_words =  "" # as.character( expression( mortality, death, d?c?s ) ) %>% paste( collapse = ', ')
+death_search_strings =  "" # as.character( expression( mort, death, d?c? ) ) %>% paste( collapse = ', ')
 
 population_search_words =  as.character( expression(  population  ) ) %>% paste( collapse = ', ')
 population_search_strings =  as.character( expression(  pop ) ) %>% paste( collapse = ', ')
@@ -129,7 +129,7 @@ malaria_data_elements_UI <- function( id ) {
 )}
 
 # Server function ####
-malaria_data_elements <- function( input, output, session , data_elements , dataSets ) {
+malaria_data_elements <- function( input, output, session , data_elements ) {
 
   # data elements
   de = reactive({ data_elements$dataDictionary() })
@@ -332,7 +332,7 @@ malaria_data_elements <- function( input, output, session , data_elements , data
   
   dataset.rows = reactive({ 
     
-    req( ind() )
+    req( malariaDataSets() )
     ds.rows = nrow( malariaDataSets() )
     paste( 'There are', ds.rows , '(most likely) malaria relevant data sets' ) 
   })
@@ -401,5 +401,12 @@ malaria_data_elements <- function( input, output, session , data_elements , data
                     buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
     ) 
   )
+  
+  # return ####
+  return(  
+    list( malariaDataElements = malariaDataElements , 
+          malariaDataSets = malariaDataSets )  
+  ) # return reactive expression with data dictionary
+  
   
 }

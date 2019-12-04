@@ -91,7 +91,7 @@ login_info <- function( input, output, session ) {
     req( input$demo )
     if ( input$demo ){
       
-      updateTextInput( session, "baseurl" , value = "https://play.dhis2.org/2.33/" )
+      updateTextInput( session, "baseurl" , value = "https://play.dhis2.org/2.32/" )
       updateTextInput( session, "username" , value = "admin" )
       updateTextInput( session, "password" , value = "district" )
     }
@@ -232,7 +232,7 @@ login_info <- function( input, output, session ) {
       write.csv( system.info()  ,  file )
     }
   )
-  
+
   return( list( login = login , baseurl = baseurl  ) )
     
 }

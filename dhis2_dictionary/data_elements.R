@@ -1,19 +1,5 @@
 # data_elements_module
 
-library( knitr )
-library( tidyverse )
-library( rlang )
-library( stringi )
-library( tidyselect )
-library( jsonlite )
-library( httr )
-library( curl )
-library( assertthat )
-library( rlang )
-library( stringi )
-library( DT )
-
-
 # Helper functions
 
 # JSON helper function ####
@@ -92,18 +78,23 @@ data_elements <- function( input, output, session , login_baseurl ) {
   baseurl = reactive({ login_baseurl$baseurl() })
   
 
+  # data Elements 
   dataElements = reactive({
     
     if (  login() ){ 
       
       showModal(modalDialog("Downloading list of data elements", footer=NULL))
       
-      # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
-      # if available, use resources method
       url<-paste0( baseurl() ,"api/dataElements.json?fields=:all&paging=false")
       cols = c( 'id', 'name', 'shortName' , 'displayName', 'displayShortName' , 
-                'zeroIsSignificant' )
-      dataElements =  get( url )[[1]] %>% select( !!cols ) 
+                'zeroIsSignificant' , 'categoryCombo')
+      
+      dataElements =  get( url )[[1]] %>% select( !!cols )
+      
+      # remove list of associated category combos and add it back as a column
+      de.categoryCombo = dataElements$categoryCombo
+      dataElements = dataElements %>% select( -categoryCombo ) 
+      dataElements$categoryCombo.id = de.categoryCombo$id 
       
       removeModal()
       
@@ -118,10 +109,10 @@ data_elements <- function( input, output, session , login_baseurl ) {
       
       showModal(modalDialog("Downloading list of data element groups", footer=NULL))
 
-      # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
-      # if available, use resources method
+      # data element groups
       url<-paste0( baseurl() , "api/dataElementGroups.json?fields=:all&paging=false")
       cols = c( 'id', 'name' , 'dataElements' )
+      
       dataElementGroups =  get( url )[[1]] %>% select( !!cols ) %>%
         rename( dataElementGroups.id = id , dataElementGroup = name )
 
@@ -129,12 +120,13 @@ data_elements <- function( input, output, session , login_baseurl ) {
                     ~merge( dataElementGroups[ .x, 1:2] ,
                             dataElementGroups$dataElements[[.x]] , all = T)
       ) %>%
-        rename( dataElement.id = id) %>%
+        rename( dataElement.id = id) 
+        
         # collapse all dataElementGroups associated with a data element
-        group_by(dataElement.id ) %>%
-        summarise(
-          dataElementGroup = paste( dataElementGroup, collapse = "\n")
-        )
+        # group_by(dataElement.id ) %>%
+        # summarise(
+        #   dataElementGroup = paste( dataElementGroup, collapse = "\n")
+        # )
       
       removeModal()
 
@@ -143,17 +135,18 @@ data_elements <- function( input, output, session , login_baseurl ) {
     } else { "Unable to login to server" }
   })
   
+  # data sets
   dataSets = reactive({
 
     if (  login() ){
       
       showModal(modalDialog("Downloading list of datasets", footer=NULL))
 
-      # if available, use resources method
       url<-paste0( baseurl() , "api/dataSets.json?fields=:all&paging=false")
       cols = c( 'id', 'name' , 'periodType' , 'dataSetElements' )
+      
       dataSets =  get( url )[[1]] %>% select( !!cols ) %>%
-        rename( dataSet.id = id, dataSet = name )
+        rename( dataSet.id = id, dataSet = name ) 
 
       removeModal()
       
@@ -162,15 +155,16 @@ data_elements <- function( input, output, session , login_baseurl ) {
     } else { "Unable to login to server" }
   })
   
+  # category combos
   categoryCombos = reactive({
 
     if (  login() ){
 
       showModal(modalDialog("Downloading list of categoryCombos", footer=NULL))
       
-      # if available, use resources method
       url<-paste0( baseurl() , "api/categoryCombos.json?fields=:all&paging=false")
       cols = c( 'id', 'name', 'categoryOptionCombos'  )
+      
       categoryCombos =  get( url )[[1]] %>% select( !!cols ) 
 
       removeModal()
@@ -180,6 +174,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
     } else { "Unable to login to server" }
   })
   
+  # category option combos
   categoryOptionCombos = reactive({
     
     if (  login() ){
@@ -188,6 +183,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
     
     url<-paste0( baseurl() , "api/categoryOptionCombos.json?fields=:all&paging=false")
     cols = c( 'id', 'name' )
+    
     categoryOptionCombos =  get( url )[[1]] %>% select( !!cols ) 
     
     removeModal()
@@ -198,22 +194,13 @@ data_elements <- function( input, output, session , login_baseurl ) {
     
   })
   
+  # Categories: full list of category option combos
   categories = reactive({
     
     req( categoryOptionCombos() )
     req( categoryCombos() )
 
     if (  login() ){
-
-      # categoryOptionCombos = categoryOptionCombos() %>%
-      #   rename( categoryOptionCombo.id = id, categoryOptionCombo = name )
-      # 
-      # coc = map_df( 1:length( categoryOptionCombos$categoryOptionCombo ),
-      #               ~merge( categoryOptionCombos[.x , 1:2] ,
-      #                       categoryOptionCombos$categoryCombo[.x, ] , all = T
-      #               )
-      # ) %>%
-      #   rename( categoryCombo.id = y )
 
       cc = categoryCombos()
       coc = categoryOptionCombos()
@@ -253,36 +240,33 @@ data_elements <- function( input, output, session , login_baseurl ) {
     cats = categories()
     deg = dataElementGroups()
     
-    # create matrix of data elements within each dataset
-    # (info comes from dataset table, not data element table)
-    
+    # DSDE : create matrix of data elements within each dataset
     dsde = map_df( 1:length( ds$dataSetElements),
                    ~map_df( ds$dataSetElements[[.x]],
-                            ~as.matrix(.x) ))
-    dictionary = dsde %>%
+                            ~as.matrix(.x) )) %>%
+      select( -categoryCombo ) 
+    
+    # Base Dictionary Line List (with categories collapsed)
+    dictionary = de  %>%  rename( dataElement = id ) %>%
       
-      select( dataElement , dataSet ,  categoryCombo ) %>%
+      left_join( dsde , by = 'dataElement' ) %>%
       
       rename( dataElement.id = dataElement ,
-              dataSet.id = dataSet ,
-              categoryCombo.id = categoryCombo ) %>%
+              dataElement = name ,
+              dataSet.id = dataSet  ) %>%
       
-      left_join( de  , by = c('dataElement.id' = 'id' )
-      ) %>%
-      
-      rename( dataElement = name ) %>%
-      
-      left_join( ds , by = 'dataSet.id' ) %>%
+      left_join( ds %>% select( - dataSetElements ) , by = 'dataSet.id' ) %>%
       
       left_join( deg , by = 'dataElement.id' ) %>%
       
       left_join( cats  , by = 'categoryCombo.id' ) %>%
       
       # reorder; move ids to end
-      select( -dataElement.id ,-categoryCombo.id , -dataSet.id ,  -dataSetElements ,
-              -shortName, -displayShortName, -zeroIsSignificant , -categoryOptionCombo.ids,
-              zeroIsSignificant , shortName , displayShortName , 
-              dataElement.id , categoryCombo.id , categoryOptionCombo.ids, dataSet.id ) %>%
+      select( dataElement , 
+              Categories , dataElementGroup , dataSet , periodType , 
+              zeroIsSignificant , shortName , displayShortName , displayName ,
+              dataElement.id , categoryCombo.id , categoryOptionCombo.ids, dataSet.id , dataElementGroups.id ,
+              n_categoryOptions, categoryCombo ) %>%
       
       # collapse all muliptle entries for each data element
       group_by( dataElement.id , dataElement ) %>%
@@ -290,8 +274,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
       summarise_all(
         
         list( ~paste( unique(.) , collapse = ';\n' ) )
-        
-      ) 
+      )
       
     removeModal()
     
