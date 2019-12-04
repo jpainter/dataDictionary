@@ -262,7 +262,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
       left_join( cats  , by = 'categoryCombo.id' ) %>%
       
       # reorder; move ids to end
-      select( dataElement.id , dataElement , 
+      select( dataElement , 
               Categories , dataElementGroup , dataSet , periodType , 
               zeroIsSignificant , shortName , displayShortName , displayName ,
               dataElement.id , categoryCombo.id , categoryOptionCombo.ids, dataSet.id , dataElementGroups.id ,

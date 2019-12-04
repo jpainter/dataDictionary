@@ -261,35 +261,54 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   }
   
   # Outputs ####
-
+  
+  # show table of malariea data elements
   output$malariaDataElements = DT::renderDT( 
     
-    mde()  %>% select( -dataElement.id , -displayName , everything() ) , 
+    if ( input$showCategoryOptions ){
+      mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
+    } else {
+      mde()  
+    } , 
     
     rownames = FALSE, 
     filter = 'top' ,
-    selection = list( mode='single', target="cell" ) ,
+    selection = list( mode='single' ) ,
     options = DToptions_no_buttons() 
   ) 
   
   # Add element to formula when clicked
-  observeEvent( input$malariaDataElements_cell_clicked , {
+  observeEvent( input$malariaDataElements_rows_selected , {
     
-    info = input$malariaDataElements_cell_clicked
+    row = input$malariaDataElements_rows_selected
     
-    print( info$value )
+    print( row )
     
-    if ( !(is.null(info$value) ) && info$col==0 ){
+    if ( !(is.null( row ) )  ){
       
-      value = ifelse( nchar( input$formulaText ) == 0  ,
-                      info$value,
+      value = if ( input$showCategoryOptions ){
+        
+        d = mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
+        de = d()$dataElement[ row ]
+        de.cc = d$Categories[ row ]
+        paste0( "[" , de , "].[" , de.cc , "]")
+        
+      } else {
+        
+        de.id = mde()$dataElement.id[ row ]
+        de = mde()$dataElement[ row ]
+        de 
+      }
+        
+      formula.value = ifelse( nchar( input$formulaText ) == 0  ,
+                      value , 
                       paste( input$formulaText , 
-                             info$value , sep = " + " )
+                             value , sep = " + " )
       ) 
       
       updateTextInput( session, 'formulaText', 
                        label = 'Formula' , 
-                       value = HTMLdecode( value ) # texutils package converts &lt to <
+                       value = HTMLdecode( formula.value ) # texutils package converts &lt to <
                        )
     }
     
@@ -302,7 +321,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
     
     rownames = FALSE , 
     filter = 'top' ,
-    server = FALSE, escape = FALSE, 
+    server = TRUE, escape = FALSE, 
     selection = list( mode='single' ) ,
     extensions = c('Buttons'), 
     options = DToptions_with_buttons( file_name = paste( 'malariaDataSets' , Sys.Date() )  ) 
@@ -392,32 +411,59 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
     )
   }
 
-  # Download Formula Dataset ####  
-  # Function to parse formula and return filtered dataset
+  
+  # Parse formula and return list of data elements in formula
   formulaElements = reactive({
     
     ft = input$formulaText
     
     if ( nchar( ft ) == 0 ) return( mde() %>% filter( FALSE ) )
     
-    formulaElementsVector = strsplit( ft , " [-+*\\/] " ) %>% unlist %>% str_trim
-    # formulaElementsVector = gsub( "\\(|\\)" , "" , formulaElementsVector ) # remove paraentheses
+    # Parse elements separated by + sign
+    formulaElements = strsplit( ft , " [-+*\\/] " ) %>% unlist %>% str_trim 
+
+    # Table of elements and categories
+    formulaParts = 
+      tibble( formulaElements = formulaElements ) %>%
+          mutate( 
+        
+            dataElement = map( formulaElements , ~strsplit( .x , "].[" , fixed = TRUE ) %>% unlist ) %>%
+                      map( . , 1 ) %>% 
+                      str_replace( . , "\\[|\\]" , "" ) ,
+                      
+            Categories = 
+                map( formulaElements , ~str_split( .x , fixed("].[") ) %>% unlist ) %>%
+                      map( . , 2 ) %>% 
+                      str_replace( . , "\\[|\\]" , "" ) 
+            
+            ) %>% select( dataElement , Categories ) %>% unique
     
-    # cat( formulaElementsVector )
+    mde =  mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
     
-    return( mde()  %>% filter( dataElement %in% formulaElementsVector ) )
+    # Filter MDE to formula elements:
+    tableOfFormulaElements = 
+        bind_rows(
+          # elements and categories
+          inner_join( mde, formulaParts %>% filter( !Categories %in% "NULL" ) , 
+                      by = c("dataElement", "Categories" ) ) ,
+          # elements only
+          semi_join( mde, formulaParts %>% filter( Categories %in% "NULL"  ) , 
+                      by = "dataElement" ) 
+        ) %>%
+          arrange( dataElement , Categories )
+        
+    return( tableOfFormulaElements )
     
   })
   
-  # display formula
+  # display data elements used in formula
   output$formulaElements = renderDT( 
     
     formulaElements() %>% 
       select( -dataElement.id , -displayName , everything() ) , 
     
     rownames = FALSE , 
-    filter = 'top' ,
-    server = FALSE, escape = FALSE, 
+    server = TRUE, escape = FALSE, 
     selection = list( mode='single' ) ,
     options = DToptions_no_buttons
     )
@@ -432,7 +478,15 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
     if (is.null( input$orgUnits ) ) showModal( modalDialog('please select a valid orgUnit level') )
     
     baseurl = login_baseurl$baseurl()  
-    de = formulaElements() %>% pull( dataElement.id ) %>% paste( collapse = ";")
+    de = formulaElements() %>% 
+      select( dataElement.id , categoryOptionCombo.ids  ) %>% 
+      mutate( de.cat = paste( dataElement.id %>% str_trim, 
+                              categoryOptionCombo.ids %>% str_trim, 
+                              sep  = ".")
+              ) %>%
+      pull( de.cat ) %>%
+      paste( collapse = ";")
+
     periods = input$period 
     orgUnits =  input$orgUnits
     aggregationType = 'DEFAULT' 
@@ -457,16 +511,21 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
       
         d = fetch %>% 
           select( -storedBy, -created, -lastUpdated, -comment ) %>%
-          rename( dataElement.id = dataElement ) %>%
-          inner_join( formulaElements() %>% 
-                        select( dataElement, dataElement.id ) ,
-                      by = "dataElement.id"
+          rename( dataElement.id = dataElement , 
+                  categoryOptionCombo.ids = categoryOptionCombo 
+                  ) %>%
+          left_join( formulaElements() %>% 
+                        select( dataElement, dataElement.id , 
+                                Categories, categoryOptionCombo.ids ) %>% 
+                       mutate( dataElement.id = dataElement.id %>% str_trim ,
+                               categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )  ,
+                      by = c( "dataElement.id" , "categoryOptionCombo.ids" )
                       )
       
       } else {
         
         d = tibble( 
-          dataElement = de. ,
+          dataElement = de. , 
           period =  periods. ,
           orgUnit =  orgUnits. ,
           aggregationType = aggregationType. ,
@@ -486,12 +545,12 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
       if ( nrow( d.sum ) > 0 & nrow( d.count ) > 0 ){ 
         
         d = d.count %>% 
-          rename( COUNT = value ) %>% 
-          full_join( d.sum %>% rename( SUM = value ) , 
-                     by = c("dataElement", "dataElement.id", "period", "orgUnit" ) 
+          rename( COUNT = value ) %>%
+          full_join( d.sum %>% rename( SUM = value ) ,
+                     by = c("dataElement", "dataElement.id", "Categories" , "categoryOptionCombo.ids", "period", "orgUnit" )
                      )  %>%
-          select( dataElement, orgUnit, period,  dataElement.id, everything() ) %>%
-          arrange( dataElement , orgUnit , desc( period ) )
+          select( dataElement, Categories , orgUnit, period,  COUNT , SUM , dataElement.id, categoryOptionCombo.ids ) %>%
+          arrange( dataElement , Categories , orgUnit , desc( period ) )
         
       } else{ 
         
@@ -513,7 +572,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
     
     rownames = FALSE , 
     filter = 'top' ,
-    server = FALSE, escape = FALSE, 
+    server = TRUE, escape = FALSE, 
     selection = list( mode='single' )   ,
     options = DToptions_no_buttons
     )
