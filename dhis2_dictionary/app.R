@@ -200,6 +200,7 @@ tabItem(tabName = 'contact',
 # Define server logic #####
 server <-  function(input, output, session){
    
+  
   # stop shiny when browser closes
   session$onSessionEnded(function() {
     stopApp()
@@ -218,6 +219,8 @@ server <-  function(input, output, session){
    
    malaria_data_formulas = callModule( malaria_data_formulas , "formulas" ,
                                       malariaDataElements = malaria_data_elements ,
+                                      orgUnits = orgUnits , 
+                                      orgUnitLevels = orgUnitLevels , 
                                       login_baseurl = login_baseurl )
    
 }

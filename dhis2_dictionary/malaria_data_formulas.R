@@ -14,6 +14,36 @@ periods = scan( text = "THIS_WEEK, LAST_WEEK, LAST_4_WEEKS, LAST_12_WEEKS, LAST_
 
 levels = scan( text = "LEVEL-1, LEVEL-2, LEVEL-3, LEVEL-4", what ="" ) %>% gsub(",", "" , .)
 
+# Helper functions
+# DT table options...
+buttonList = function( file_name = paste( 'downloaded' , Sys.Date() ) ){
+  list( 'copy', 'print', 
+        list(
+          extend = 'collection', 
+          buttons = list( 
+            list( extend = 'csv'  , filename = file_name) , 
+            list( extend = 'excel'  , filename = file_name) ,
+            list( extend = 'pdf' , filename = file_name)  
+          ) ,
+          text = 'Download' 
+        )
+  )
+}
+
+DToptions_with_buttons = function(...){
+  list( autoWidth = TRUE , 
+        scrollX = TRUE  ,
+        dom = 'Bfrtip' ,
+        buttons = buttonList(...)
+  )
+}
+
+DToptions_no_buttons = function(...){
+  list( autoWidth = TRUE , 
+        scrollX = TRUE  
+  )
+}
+
 # Module UI function  ####
 malaria_data_formulas_UI <- function( id ) {
   # Create a namespace function using the provided id
@@ -134,13 +164,22 @@ malaria_data_formulas_UI <- function( id ) {
 )}
 
 # Server function ####
-malaria_data_formulas <- function( input, output, session , malariaDataElements , login_baseurl  ) {
+malaria_data_formulas <- function( input, output, session , 
+                                   malariaDataElements , 
+                                   orgUnits, orgUnitLevels , 
+                                   login_baseurl  ) {
 
   # malaria data elements
   mde = reactive({ malariaDataElements$malariaDataElements() }) 
   
   # malaria datasets
   mds = reactive({ malariaDataElements$malariaDataSets() }) 
+  
+  # organizational unit levels
+  ous = reactive({ orgUnits$orgUnits() }) 
+  
+  # organizational units
+  ouLevels = reactive({ orgUnits$orgUnitLevels() }) 
   
   # Initialize Formula Table
   formula_table = reactiveVal( tibble( Formula.Name = "" , Formula = "" ) )
@@ -231,35 +270,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   } )
   
  
-  # DT table options...
-  buttonList = function( file_name = paste( 'downloaded' , Sys.Date() ) ){
-    list( 'copy', 'print', 
-          list(
-            extend = 'collection', 
-            buttons = list( 
-              list( extend = 'csv'  , filename = file_name) , 
-              list( extend = 'excel'  , filename = file_name) ,
-              list( extend = 'pdf' , filename = file_name)  
-            ) ,
-            text = 'Download' 
-          )
-    )
-  }
-  
-  DToptions_with_buttons = function(...){
-    list( autoWidth = TRUE , 
-          scrollX = TRUE  ,
-          dom = 'Bfrtip' ,
-          buttons = buttonList(...)
-    )
-  }
-  
-  DToptions_no_buttons = function(...){
-    list( autoWidth = TRUE , 
-          scrollX = TRUE  
-    )
-  }
-  
+
   # Outputs ####
   
   # show table of malariea data elements
@@ -459,8 +470,8 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   # display data elements used in formula
   output$formulaElements = renderDT( 
     
-    formulaElements() %>% 
-      select( -dataElement.id , -displayName , everything() ) , 
+    formulaElements() %>%
+      select( -dataElement.id , -displayName , everything() ) ,
     
     rownames = FALSE , 
     server = TRUE, escape = FALSE, 
@@ -478,6 +489,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
     if (is.null( input$orgUnits ) ) showModal( modalDialog('please select a valid orgUnit level') )
     
     baseurl = login_baseurl$baseurl()  
+    
     de = formulaElements() %>% 
       select( dataElement.id , categoryOptionCombo.ids  ) %>% 
       mutate( de.cat = paste( dataElement.id %>% str_trim, 
@@ -488,7 +500,9 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
       paste( collapse = ";")
 
     periods = input$period 
+    
     orgUnits =  input$orgUnits
+    
     aggregationType = 'DEFAULT' 
     
     # print( baseurl ); print( de ); print( periods ) ; print( orgUnits ); print( aggregationType )
@@ -520,7 +534,13 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
                        mutate( dataElement.id = dataElement.id %>% str_trim ,
                                categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )  ,
                       by = c( "dataElement.id" , "categoryOptionCombo.ids" )
-                      )
+                      ) %>%
+          left_join( ous() %>% 
+                       select( id, name, level, levelName )  %>% 
+                       rename( orgUnit = id , orgUnitName = name ) ,
+                     by = 'orgUnit' 
+                     )  
+        
       
       } else {
         
@@ -547,10 +567,10 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
         d = d.count %>% 
           rename( COUNT = value ) %>%
           full_join( d.sum %>% rename( SUM = value ) ,
-                     by = c("dataElement", "dataElement.id", "Categories" , "categoryOptionCombo.ids", "period", "orgUnit" )
+                     by = c("dataElement", "dataElement.id", "Categories" , "categoryOptionCombo.ids", "period", "orgUnit" , 'orgUnitName', 'level', 'levelName'  )
                      )  %>%
-          select( dataElement, Categories , orgUnit, period,  COUNT , SUM , dataElement.id, categoryOptionCombo.ids ) %>%
-          arrange( dataElement , Categories , orgUnit , desc( period ) )
+          select( dataElement, Categories , orgUnitName, levelName,  period,  COUNT , SUM , dataElement.id, categoryOptionCombo.ids , orgUnit , level  ) %>%
+          arrange( dataElement , Categories , desc( period ) , level )
         
       } else{ 
         
@@ -599,7 +619,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   
   output$downloadFormulaData <- downloadHandler(
     
-    filename = paste0( input$formulaName , Sys.Date()  ,".xlsx"  ) ,
+    filename = paste0( input$formulaName , "_" , Sys.Date()  , ".xlsx"  ) ,
 
     content = function( file ) {
       
@@ -624,7 +644,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   
   output$downloadFormulas <- downloadHandler(
     
-    filename = paste0( "Formulas" , Sys.Date()  ,".xlsx" ) ,
+    filename = paste0( "Formulas" , "_" , Sys.Date()  , ".xlsx" ) ,
     
     content = function( file ) {
       
