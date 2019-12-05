@@ -12,7 +12,7 @@ periods = scan( text = "THIS_WEEK, LAST_WEEK, LAST_4_WEEKS, LAST_12_WEEKS, LAST_
                  LAST_3_MONTHS, LAST_6_BIMONTHS, LAST_4_QUARTERS, LAST_2_SIXMONTHS, THIS_FINANCIAL_YEAR,
                  LAST_FINANCIAL_YEAR, LAST_5_FINANCIAL_YEARS", what ="" ) %>% gsub(",", "" , .)
 
-levels = scan( text = "LEVEL-1, LEVEL-2, LEVEL-3, LEVEL-4", what ="" ) %>% gsub(",", "" , .)
+levels = scan( text = "LEVEL-1, LEVEL-2, LEVEL-3, LEVEL-4", what = "" ) %>% gsub(",", "" , .)
 
 # Helper functions
 # DT table options...
@@ -149,6 +149,19 @@ malaria_data_formulas_UI <- function( id ) {
                                    )
                          )
                 ) ,
+                
+                
+                tabPanel("Formula Summary",
+                         
+                         textInput( ns("formulaEpression") , label = "formulaEpression", value = "" , width = '100%' ) ,
+                         
+                         h2('Final Formula Dataset') ,
+                         
+                         DTOutput( ns('FormulaTotals') ) 
+                         
+                         
+                         
+                )  ,
 
                 tabPanel("View Malaria-relevant Datasets",
                          
@@ -277,7 +290,9 @@ malaria_data_formulas <- function( input, output, session ,
   output$malariaDataElements = DT::renderDT( 
     
     if ( input$showCategoryOptions ){
+      
       mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
+      
     } else {
       mde()  
     } , 
@@ -300,15 +315,15 @@ malaria_data_formulas <- function( input, output, session ,
       value = if ( input$showCategoryOptions ){
         
         d = mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
-        de = d()$dataElement[ row ]
-        de.cc = d$Categories[ row ]
+        de = d$dataElement[ row ] %>% trim
+        de.cc = d$Categories[ row ] %>% trim
         paste0( "[" , de , "].[" , de.cc , "]")
         
       } else {
         
         de.id = mde()$dataElement.id[ row ]
         de = mde()$dataElement[ row ]
-        de 
+        paste0( "[" , de , "]" ) 
       }
         
       formula.value = ifelse( nchar( input$formulaText ) == 0  ,
@@ -430,7 +445,7 @@ malaria_data_formulas <- function( input, output, session ,
     
     if ( nchar( ft ) == 0 ) return( mde() %>% filter( FALSE ) )
     
-    # Parse elements separated by + sign
+    # Parse elements separated by mathematical operator
     formulaElements = strsplit( ft , " [-+*\\/] " ) %>% unlist %>% str_trim 
 
     # Table of elements and categories
@@ -482,7 +497,36 @@ malaria_data_formulas <- function( input, output, session ,
   
   output$n_FormulaElements = renderText( paste( nrow( formulaElements()) , "data elements are selected.") )
   
+  # Formula summary data
+  # Formula expression
+  formulaExpression = reactive({
+    
+    ft = input$formulaText
+    
+    # Parse elements separated by mathematical operator
+    formulaElements = strsplit( ft , " [-+*\\/] " ) %>% unlist %>% str_trim 
+    
+    
+    mde = mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
+    
+    formulaExpression = formulaElements() %>%
+      left_join( mde , by = c('dataElement.id' , 'categoryOptionCombo.ids') ) %>%
+      mutate(
+        dataElement.id = paste0( "[" , dataElement.id , "]") ,
+        categoryOptionCombo.ids = paste0( "[" , categoryOptionCombo.ids , "]")
+      ) %>%
+      unite( "box" , dataElement.id , categoryOptionCombo.ids, sep = ".", remove = TRUE, na.rm = FALSE )
+    
+    
+  })
+  
+  output$formulaExpression = renderText( formulaExpression() )
+  
+  
+  
+  
   # download data button.  
+  
   dd = eventReactive( input$downloadButton , {
     
     if (is.null( input$period ) ) showModal( modalDialog('please select a valid period') )
@@ -596,6 +640,7 @@ malaria_data_formulas <- function( input, output, session ,
     selection = list( mode='single' )   ,
     options = DToptions_no_buttons
     )
+  
   
   # empty table if formula elements change
   # observeEvent( formulaElements(), {  output$formulaData = renderDT() } )
