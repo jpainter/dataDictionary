@@ -26,15 +26,13 @@
 #   lapply( libraries , require  , character.only = TRUE) 
 # )
 
-if ( sum( c('shinyBS' , 'shinyLP' , 'textutils' , 'openxlsx') %in% installed.packages()[,1] ) !=4 ) install.packages( c('shinyBS' , 'shinyLP' , 'textutils' ,  'openxlsx' )  )
-
 library( shiny ) 
 library( shinydashboard ) 
 library( shinyBS )
 library( shinyLP )
-# library( plotly )  
+library( plotly )
 library( tidyverse )
-# library( googleVis )
+library( googleVis )
 library( scales ) 
 library( knitr )
 library( rlang )
@@ -44,12 +42,12 @@ library( jsonlite )
 library( httr )
 library( curl ) 
 library( assertthat ) 
-# library( knitrProgressBar )
-# library(futile.logger)
+library( knitrProgressBar )
+library(futile.logger)
 library(utils)
 library( DT )
 library( textutils )
-# library( readxl )
+library( readxl )
 library( openxlsx  )
 
 
@@ -105,9 +103,9 @@ ui <- dashboardPage(
   dashboardBody(
     
   # custom CSS
-    # tags$head(
-    #   tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
-    # ) ,
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+  ) ,
     
     tabItems(
       
