@@ -454,13 +454,13 @@ malaria_data_formulas <- function( input, output, session ,
           mutate( 
         
             dataElement = map( formulaElements , ~strsplit( .x , "].[" , fixed = TRUE ) %>% unlist ) %>%
-                      map( . , 1 ) %>% 
-                      str_replace( . , "\\[|\\]" , "" ) ,
+                      map( . , 1 ) %>%
+                      str_replace_all( . , "\\[|\\]" , "" ) ,
                       
             Categories = 
                 map( formulaElements , ~str_split( .x , fixed("].[") ) %>% unlist ) %>%
                       map( . , 2 ) %>% 
-                      str_replace( . , "\\[|\\]" , "" ) 
+                      str_replace_all( . , "\\[|\\]" , "" ) 
             
             ) %>% select( dataElement , Categories ) %>% unique
     

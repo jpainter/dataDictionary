@@ -5,50 +5,51 @@
 
 # install and load libraries ####
 
-# libraries = as.character( 
-#   quote( c( shiny, shinydashboard, plotly, tidyverse, googleVis, scales , 
-#                knitr, rlang, stringi, tidyselect, jsonlite, httr, curl, assertthat, DT ) )[-1]
-# )
+libraries = as.character(
+  quote( c( shiny, shinydashboard, shinyBS , plotly, shinyLP , tidyverse, googleVis, scales ,
+               knitr, rlang, stringi, tidyselect, jsonlite, httr, curl, assertthat, DT ,
+            knitrProgressBar , futile.logger , utils , textutils , readxl , openxlsx ) )[-1]
+)
 
 
 # Function to test if package is installed
-# pkgTest <- function( package.list = libraries ){
-# 
-#   missing.packages = setdiff( package.list , rownames( installed.packages() ) )
-#   if ( length( missing.packages ) > 0 ) install.packages( missing.packages , dependencies = TRUE )
-# }
-# 
-# # Test if packages installed
-# pkgTest( libraries )
+pkgTest <- function( package.list = libraries ){
+
+  missing.packages = setdiff( package.list , rownames( installed.packages() ) )
+  if ( length( missing.packages ) > 0 ) install.packages( missing.packages , dependencies = TRUE )
+}
+
+# Test if packages installed
+pkgTest( libraries )
 
 # load the packages
-# suppressMessages( 
-#   lapply( libraries , require  , character.only = TRUE) 
-# )
+suppressMessages(
+  lapply( libraries , require  , character.only = TRUE)
+)
 
-library( shiny ) 
-library( shinydashboard ) 
-library( shinyBS )
-library( shinyLP )
-library( plotly )
-library( tidyverse )
-library( googleVis )
-library( scales ) 
-library( knitr )
-library( rlang )
-library( stringi )
-library( tidyselect )
-library( jsonlite )
-library( httr )
-library( curl ) 
-library( assertthat ) 
-library( knitrProgressBar )
-library(futile.logger)
-library(utils)
-library( DT )
-library( textutils )
-library( readxl )
-library( openxlsx  )
+# library( shiny ) 
+# library( shinydashboard ) 
+# library( shinyBS )
+# library( shinyLP )
+# library( plotly )
+# library( tidyverse )
+# library( googleVis )
+# library( scales ) 
+# library( knitr )
+# library( rlang )
+# library( stringi )
+# library( tidyselect )
+# library( jsonlite )
+# library( httr )
+# library( curl ) 
+# library( assertthat ) 
+# library( knitrProgressBar )
+# library(futile.logger)
+# library(utils)
+# library( DT )
+# library( textutils )
+# library( readxl )
+# library( openxlsx  )
 
 
 # load modules ####
