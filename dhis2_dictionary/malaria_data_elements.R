@@ -61,10 +61,13 @@ malaria_data_elements_UI <- function( id ) {
                          
                          textOutput( ns('n_ds') ) ,
                          
-                         DTOutput( ns('malariaDataSets') )
+                         DTOutput( ns('malariaDataSets') ) ,
                          
-                ) ,
-                
+                         textInput( ns("datasetURL") , label = "datasetURL", value = "" , width = '100%' ) ,
+                         
+                         htmlOutput( ns("frame") )
+                         
+                ) , 
                 
                 tabPanel( "Malaria-relevant search terms" ,
                           
@@ -337,6 +340,103 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
     paste( 'There are', ds.rows , '(most likely) malaria relevant data sets' ) 
   })
   
+  
+  # Output Malaria Datasets
+  output$malariaDataSets = renderDT( 
+    
+    mds() , 
+    
+    rownames = FALSE , 
+    filter = 'top' ,
+    server = TRUE, escape = FALSE, 
+    selection = list( mode='single' ) ,
+    extensions = c('Buttons'), 
+    options = DToptions_with_buttons( file_name = paste( 'malariaDataSets' , Sys.Date() )  ) 
+  )
+  
+  
+  # pdf.url = "https://play.dhis2.org/2.33.0/api/32/dataSetReport.pdf?filter=&ds=Nyh6laLdBEJ&pe=2020&ou=ImspTQPwCqd"
+  # test.url = "http://www.google.nl/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
+  # test.pdf = "http://www.pdf995.com/samples/pdf.pdf#page=4"
+  # image.url = paste0( "<img src='" , test.url , "'>")
+  
+  dataset_link = reactive({
+    
+    # "http://www.pdf995.com/samples/pdf.pdf#page=4"
+    
+    paste0( login_baseurl$baseurl() ,
+            "api/32/dataSetReport.pdf?filter=&ds=" ,
+            "Nyh6laLdBEJ" ,
+            "&pe=2020&ou=ImspTQPwCqd"
+    )
+    
+  })
+  
+  observeEvent( input$malariaDataSets_cell_clicked , {
+    
+    # showModal( imageModal() ) 
+    
+    info = input$malariaDataSets_cell_clicked
+    # info = input$malariaDataElements_cell_clicked
+    
+    print( info$value )
+    
+    if ( !(is.null( info$value ) ) ){
+      
+      url =       paste0( login_baseurl$baseurl() ,
+                          "api/32/dataSetReport" ,
+                          "/custom" ,
+                          "?filter=&ds=" ,
+                          info$value ,
+                          "&pe=2020&ou=ImspTQPwCqd&selectedUnitOnly=false"
+      )
+      
+      updateTextInput( session, 'datasetURL', value = url )
+      
+    }
+    
+  })
+  
+  
+  getPage<-reactive({
+    
+    req( input$datasetURL )
+    
+    username<-"admin"
+    password<-"district"
+    
+    # url =  'https://play.dhis2.org/2.33.0/api/32/dataSetReport/custom?filter=&ds=eZDhcZi6FLP&pe=2020&ou=ImspTQPwCqd&selectedUnitOnly=false'
+    url = input$datasetURL
+    
+    r = GET( url , authenticate( username, password ))
+    return( content(r, as = 'text')  %>% HTML() )
+  })
+  
+  output$frame<-renderUI({
+    x <- input$test  
+    getPage()
+  })
+  
+  
+  imageModal <- function() {
+    
+    modalDialog(
+      
+      # HTML( image.url ) 
+      
+      tags$iframe(style="height:800px; width:100%; scrolling=yes", 
+                  src= test.pdf 
+      )
+      
+      #   renderPlot({
+      #     mtcars %>%
+      #       ggplot() +
+      #       geom_histogram(aes(x = cyl),binwidth = 2.5, fill = "skyblue", color = "black") +
+      #       theme_bw()
+      # })
+      ,  easyClose = TRUE 
+    )
+  }
   
   # Outputs ####
   

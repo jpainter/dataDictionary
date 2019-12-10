@@ -97,7 +97,7 @@ malaria_data_formulas_UI <- function( id ) {
                                   
                                   tags$br() ,
                                   
-                                   actionButton( ns("downloadButton") , "Request data") , HTML('&emsp;') ,
+                                   actionButton( ns("requestButton") , "Request data") , HTML('&emsp;') ,
                                   
                                    downloadButton( ns('downloadFormulaData') , 'Download Formula and Data')
                           )   
@@ -120,13 +120,10 @@ malaria_data_formulas_UI <- function( id ) {
                          )
                 ) ,
 
-                tabPanel("View Malaria-relevant Datasets",
+                tabPanel("Formula Dataset",
                          
-                         DTOutput( ns('malariaDataSets') ) ,
-                         
-                         textInput( ns("datasetURL") , label = "datasetURL", value = "" , width = '100%' ) ,
-                         
-                         htmlOutput( ns("frame") )
+                         DTOutput( ns('formulaDataset') ) 
+       
                          
                 )  
     )
@@ -145,7 +142,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   # Initialize Formula Table
   formula_table = reactiveVal( tibble( Formula.Name = "" , Formula = "" ) )
   
-  # uploaded formulas
+  # uploaded formulas ####
   data_formula_file <- reactive({
     
     req( input$file1 )
@@ -157,7 +154,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   
   uploaded_formulas = reactive({ read.xlsx( data_formula_file() ,  "Formula" ) })
   
-  
+  # Display formula table ####
   output$contents <- renderDT({
     
     formula_table()
@@ -165,14 +162,11 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   })
   
   
-  # Get values from formula spreadsheet
+  # Get values from formula spreadsheet ####
   metadata = reactive({ read.xlsx( data_formula_file() ,  1 ) })
-  # formulas = reactive({ read.xlsx( data_formula_file() ,  2 ) %>%
-  #     bind_rows( c(Formula.Name = "Add new formula") ) })
-  # dataElementValues = reactive({ read.xlsx( data_formula_file() ,  3 ) })
-  # formulaValues = reactive({ read.xlsx( data_formula_file() ,  4 ) })
+ 
   
-  # update pulldown list
+  # update select formula edit pulldown list ####
   observeEvent( uploaded_formulas() ,{
     
     formula_table( uploaded_formulas() )
@@ -185,7 +179,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
 
   } )
   
-  # Update formulas
+  # Update formulas ####
   observeEvent( input$updateFormulas , {
 
     f = which( formula_table()$Formula.Name %in% input$formulaName )
@@ -216,7 +210,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   })
 
 
-  # update formula boxes after selecting item
+  # update formula boxes after selecting item ####
   observeEvent( input$selectFormula , {
     
     req( input$selectFormula )
@@ -231,7 +225,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   } )
   
  
-  # DT table options...
+  # DT table options... ####
   buttonList = function( file_name = paste( 'downloaded' , Sys.Date() ) ){
     list( 'copy', 'print', 
           list(
@@ -260,9 +254,8 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
     )
   }
   
-  # Outputs ####
-  
-  # show table of malariea data elements
+
+  # Display table of malaria data elements ####
   output$malariaDataElements = DT::renderDT( 
     
     if ( input$showCategoryOptions ){
@@ -314,105 +307,9 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
     
   })
  
-  # Output Malaria Datasets
-  output$malariaDataSets = renderDT( 
-    
-      mds() , 
-    
-    rownames = FALSE , 
-    filter = 'top' ,
-    server = TRUE, escape = FALSE, 
-    selection = list( mode='single' ) ,
-    extensions = c('Buttons'), 
-    options = DToptions_with_buttons( file_name = paste( 'malariaDataSets' , Sys.Date() )  ) 
-    )
-  
-  
-  pdf.url = "https://play.dhis2.org/2.33.0/api/32/dataSetReport.pdf?filter=&ds=Nyh6laLdBEJ&pe=2020&ou=ImspTQPwCqd"
-  test.url = "http://www.google.nl/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
-  test.pdf = "http://www.pdf995.com/samples/pdf.pdf#page=4"
-  image.url = paste0( "<img src='" , test.url , "'>")
-  
-  dataset_link = reactive({
-    
-    # "http://www.pdf995.com/samples/pdf.pdf#page=4"
-    
-    paste0( login_baseurl$baseurl() ,
-            "api/32/dataSetReport.pdf?filter=&ds=" ,
-            "Nyh6laLdBEJ" ,
-            "&pe=2020&ou=ImspTQPwCqd"
-    )
-    
-  })
-  
-  observeEvent( input$malariaDataSets_cell_clicked , {
-    
-    # showModal( imageModal() ) 
-    
-    info = input$malariaDataSets_cell_clicked
-    # info = input$malariaDataElements_cell_clicked
-    
-    print( info$value )
-    
-    if ( !(is.null( info$value ) ) ){
-    
-      url =       paste0( login_baseurl$baseurl() ,
-                            "api/32/dataSetReport" ,
-                            "/custom" ,
-                            "?filter=&ds=" ,
-                          info$value ,
-                            "&pe=2020&ou=ImspTQPwCqd&selectedUnitOnly=false"
-      )
-      
-      updateTextInput( session, 'datasetURL', value = url )
-    
-    }
-  
-  })
-  
-
-  getPage<-reactive({
-    
-    req( input$datasetURL )
-    
-    username<-"admin"
-    password<-"district"
-    
-    # url =  'https://play.dhis2.org/2.33.0/api/32/dataSetReport/custom?filter=&ds=eZDhcZi6FLP&pe=2020&ou=ImspTQPwCqd&selectedUnitOnly=false'
-    url = input$datasetURL
-    
-    r = GET( url , authenticate( username, password ))
-    return( content(r, as = 'text')  %>% HTML() )
-  })
-  
-  output$frame<-renderUI({
-    x <- input$test  
-    getPage()
-  })
-  
-  
-  imageModal <- function() {
-    
-    modalDialog(
-      
-      # HTML( image.url ) 
-      
-      tags$iframe(style="height:800px; width:100%; scrolling=yes", 
-                  src= test.pdf 
-                  )
-      
-      #   renderPlot({
-      #     mtcars %>%
-      #       ggplot() +
-      #       geom_histogram(aes(x = cyl),binwidth = 2.5, fill = "skyblue", color = "black") +
-      #       theme_bw()
-      # })
-      ,  easyClose = TRUE 
-    )
-  }
 
   
-  # Parse formula and return list of data elements in formula
+  # Parse formula and return list of data elements in formula ####
   formulaElements = reactive({
     
     ft = input$formulaText
@@ -471,8 +368,10 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   
   output$n_FormulaElements = renderText( paste( nrow( formulaElements()) , "data elements are selected.") )
   
-  # download data button.  
-  dd = eventReactive( input$downloadButton , {
+  
+  
+  # download data button.  ####
+  dd = eventReactive( input$requestButton , {
     
     if (is.null( input$period ) ) showModal( modalDialog('please select a valid period') )
     if (is.null( input$orgUnits ) ) showModal( modalDialog('please select a valid orgUnit level') )
@@ -499,7 +398,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
     
     output$apiUrl = renderText( url )
 
-    # Fetch data
+    # Fetch data ####
     fetch <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
       
       url = api_url( baseurl. , de. , periods. , orgUnits. , aggregationType. )
@@ -565,7 +464,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
       
    })
   
-  # display formula data
+  # display formula data ####
   output$formulaData = renderDT( 
     
     dd() , 
@@ -596,6 +495,7 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   )
   })
   
+  # Download formula data ####
   output$downloadFormulaData <- downloadHandler(
     
     filename = paste0( input$formulaName , Sys.Date()  ,".xlsx"  ) ,
@@ -643,4 +543,45 @@ malaria_data_formulas <- function( input, output, session , malariaDataElements 
   )
   
 
+  # Create formula dataset from formula data  ####
+  
+  formula_dataset = reactive({ 
+    
+    req( dd() )
+    
+    # d = dd() %>% 
+    #   select( orgUnit, period , dataElement.id , categoryOptionCombo.ids , SUM ) %>% 
+    #   mutate( 
+    #     # dataElement.id = paste0( "[" , dataElement.id , "]") ,
+    #     # categoryOptionCombo.ids = paste0( "[" , categoryOptionCombo.ids , "]") ,
+    #     SUM = as.numeric( SUM )
+    #   ) %>%
+    #   unite( "box" , dataElement.id , categoryOptionCombo.ids, sep = ".", remove = TRUE, na.rm = FALSE ) %>%
+    #   complete( orgUnit, period , box , fill = list( SUM = 0 ) ) %>%
+    #   pivot_wider( 
+    #     names_from = box,
+    #     values_from = SUM ) 
+    # 
+    #   f = "bqK6eSIwo3h.pq2XI5kz2BY + bqK6eSIwo3h.PT59n8BQbqM"
+    #   
+    #   
+    #   formula_dataset = d %>% group_by( orgUnit, period ) %>%
+    #     summarise( sum = eval( parse( text  = f ) ) )
+      
+      return( dd() )
+  
+  })
+  
+  # Display formula dataset ####
+  output$formulaDataset = DT::renderDT( 
+    
+    formula_dataset() ,
+    
+    rownames = FALSE, 
+    filter = 'top' ,
+    selection = list( mode='single' ) ,
+    options = DToptions_with_buttons()
+  ) 
+  
+  
 }
