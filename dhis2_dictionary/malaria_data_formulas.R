@@ -1,3 +1,4 @@
+
 # malaria_data_formulas_module
 
 source( "API.r")
@@ -12,37 +13,7 @@ periods = scan( text = "THIS_WEEK, LAST_WEEK, LAST_4_WEEKS, LAST_12_WEEKS, LAST_
                  LAST_3_MONTHS, LAST_6_BIMONTHS, LAST_4_QUARTERS, LAST_2_SIXMONTHS, THIS_FINANCIAL_YEAR,
                  LAST_FINANCIAL_YEAR, LAST_5_FINANCIAL_YEARS", what ="" ) %>% gsub(",", "" , .)
 
-levels = scan( text = "LEVEL-1, LEVEL-2, LEVEL-3, LEVEL-4", what = "" ) %>% gsub(",", "" , .)
-
-# Helper functions
-# DT table options...
-buttonList = function( file_name = paste( 'downloaded' , Sys.Date() ) ){
-  list( 'copy', 'print', 
-        list(
-          extend = 'collection', 
-          buttons = list( 
-            list( extend = 'csv'  , filename = file_name) , 
-            list( extend = 'excel'  , filename = file_name) ,
-            list( extend = 'pdf' , filename = file_name)  
-          ) ,
-          text = 'Download' 
-        )
-  )
-}
-
-DToptions_with_buttons = function(...){
-  list( autoWidth = TRUE , 
-        scrollX = TRUE  ,
-        dom = 'Bfrtip' ,
-        buttons = buttonList(...)
-  )
-}
-
-DToptions_no_buttons = function(...){
-  list( autoWidth = TRUE , 
-        scrollX = TRUE  
-  )
-}
+levels = scan( text = "LEVEL-1, LEVEL-2, LEVEL-3, LEVEL-4", what ="" ) %>% gsub(",", "" , .)
 
 # Module UI function  ####
 malaria_data_formulas_UI <- function( id ) {
@@ -127,7 +98,7 @@ malaria_data_formulas_UI <- function( id ) {
                                   
                                   tags$br() ,
                                   
-                                   actionButton( ns("downloadButton") , "Request data") , HTML('&emsp;') ,
+                                   actionButton( ns("requestButton") , "Request data") , HTML('&emsp;') ,
                                   
                                    downloadButton( ns('downloadFormulaData') , 'Download Formula and Data')
                           )   
@@ -149,27 +120,13 @@ malaria_data_formulas_UI <- function( id ) {
                                    )
                          )
                 ) ,
-                
-                
-                tabPanel("Formula Summary",
-                         
-                         textInput( ns("formulaEpression") , label = "formulaEpression", value = "" , width = '100%' ) ,
+
+                tabPanel("Formula Dataset",
                          
                          h2('Final Formula Dataset') ,
                          
-                         DTOutput( ns('FormulaTotals') ) 
-                         
-                         
-                         
-                )  ,
-
-                tabPanel("View Malaria-relevant Datasets",
-                         
-                         DTOutput( ns('malariaDataSets') ) ,
-                         
-                         textInput( ns("datasetURL") , label = "datasetURL", value = "" , width = '100%' ) ,
-                         
-                         htmlOutput( ns("frame") )
+                         DTOutput( ns('formulaDataset') ) 
+                    
                          
                 )  
     )
@@ -179,9 +136,9 @@ malaria_data_formulas_UI <- function( id ) {
 # Server function ####
 malaria_data_formulas <- function( input, output, session , 
                                    malariaDataElements , 
-                                   orgUnits, orgUnitLevels , 
-                                   login_baseurl  ) {
-
+                                   orgUnits, 
+                                   login_baseurl  ){
+  
   # malaria data elements
   mde = reactive({ malariaDataElements$malariaDataElements() }) 
   
@@ -191,13 +148,10 @@ malaria_data_formulas <- function( input, output, session ,
   # organizational unit levels
   ous = reactive({ orgUnits$orgUnits() }) 
   
-  # organizational units
-  ouLevels = reactive({ orgUnits$orgUnitLevels() }) 
-  
   # Initialize Formula Table
   formula_table = reactiveVal( tibble( Formula.Name = "" , Formula = "" ) )
   
-  # uploaded formulas
+  # uploaded formulas ####
   data_formula_file <- reactive({
     
     req( input$file1 )
@@ -209,7 +163,7 @@ malaria_data_formulas <- function( input, output, session ,
   
   uploaded_formulas = reactive({ read.xlsx( data_formula_file() ,  "Formula" ) })
   
-  
+  # Display formula table ####
   output$contents <- renderDT({
     
     formula_table()
@@ -217,14 +171,11 @@ malaria_data_formulas <- function( input, output, session ,
   })
   
   
-  # Get values from formula spreadsheet
+  # Get values from formula spreadsheet ####
   metadata = reactive({ read.xlsx( data_formula_file() ,  1 ) })
-  # formulas = reactive({ read.xlsx( data_formula_file() ,  2 ) %>%
-  #     bind_rows( c(Formula.Name = "Add new formula") ) })
-  # dataElementValues = reactive({ read.xlsx( data_formula_file() ,  3 ) })
-  # formulaValues = reactive({ read.xlsx( data_formula_file() ,  4 ) })
+ 
   
-  # update pulldown list
+  # update select formula edit pulldown list ####
   observeEvent( uploaded_formulas() ,{
     
     formula_table( uploaded_formulas() )
@@ -237,7 +188,7 @@ malaria_data_formulas <- function( input, output, session ,
 
   } )
   
-  # Update formulas
+  # Update formulas ####
   observeEvent( input$updateFormulas , {
 
     f = which( formula_table()$Formula.Name %in% input$formulaName )
@@ -268,7 +219,7 @@ malaria_data_formulas <- function( input, output, session ,
   })
 
 
-  # update formula boxes after selecting item
+  # update formula boxes after selecting item ####
   observeEvent( input$selectFormula , {
     
     req( input$selectFormula )
@@ -283,16 +234,41 @@ malaria_data_formulas <- function( input, output, session ,
   } )
   
  
-
-  # Outputs ####
+  # DT table options... ####
+  buttonList = function( file_name = paste( 'downloaded' , Sys.Date() ) ){
+    list( 'copy', 'print', 
+          list(
+            extend = 'collection', 
+            buttons = list( 
+              list( extend = 'csv'  , filename = file_name) , 
+              list( extend = 'excel'  , filename = file_name) ,
+              list( extend = 'pdf' , filename = file_name)  
+            ) ,
+            text = 'Download' 
+          )
+    )
+  }
   
-  # show table of malariea data elements
+  DToptions_with_buttons = function(...){
+    list( autoWidth = TRUE , 
+          scrollX = TRUE  ,
+          dom = 'Bfrtip' ,
+          buttons = buttonList(...)
+    )
+  }
+  
+  DToptions_no_buttons = function(...){
+    list( autoWidth = TRUE , 
+          scrollX = TRUE  
+    )
+  }
+  
+
+  # Display table of malaria data elements ####
   output$malariaDataElements = DT::renderDT( 
     
     if ( input$showCategoryOptions ){
-      
       mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
-      
     } else {
       mde()  
     } , 
@@ -315,15 +291,15 @@ malaria_data_formulas <- function( input, output, session ,
       value = if ( input$showCategoryOptions ){
         
         d = mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
-        de = d$dataElement[ row ] %>% trim
-        de.cc = d$Categories[ row ] %>% trim
+        de = d()$dataElement[ row ]
+        de.cc = d$Categories[ row ]
         paste0( "[" , de , "].[" , de.cc , "]")
         
       } else {
         
         de.id = mde()$dataElement.id[ row ]
         de = mde()$dataElement[ row ]
-        paste0( "[" , de , "]" ) 
+        de 
       }
         
       formula.value = ifelse( nchar( input$formulaText ) == 0  ,
@@ -340,105 +316,9 @@ malaria_data_formulas <- function( input, output, session ,
     
   })
  
-  # Output Malaria Datasets
-  output$malariaDataSets = renderDT( 
-    
-      mds() , 
-    
-    rownames = FALSE , 
-    filter = 'top' ,
-    server = TRUE, escape = FALSE, 
-    selection = list( mode='single' ) ,
-    extensions = c('Buttons'), 
-    options = DToptions_with_buttons( file_name = paste( 'malariaDataSets' , Sys.Date() )  ) 
-    )
-  
-  
-  pdf.url = "https://play.dhis2.org/2.33.0/api/32/dataSetReport.pdf?filter=&ds=Nyh6laLdBEJ&pe=2020&ou=ImspTQPwCqd"
-  test.url = "http://www.google.nl/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
-  test.pdf = "http://www.pdf995.com/samples/pdf.pdf#page=4"
-  image.url = paste0( "<img src='" , test.url , "'>")
-  
-  dataset_link = reactive({
-    
-    # "http://www.pdf995.com/samples/pdf.pdf#page=4"
-    
-    paste0( login_baseurl$baseurl() ,
-            "api/32/dataSetReport.pdf?filter=&ds=" ,
-            "Nyh6laLdBEJ" ,
-            "&pe=2020&ou=ImspTQPwCqd"
-    )
-    
-  })
-  
-  observeEvent( input$malariaDataSets_cell_clicked , {
-    
-    # showModal( imageModal() ) 
-    
-    info = input$malariaDataSets_cell_clicked
-    # info = input$malariaDataElements_cell_clicked
-    
-    print( info$value )
-    
-    if ( !(is.null( info$value ) ) ){
-    
-      url =       paste0( login_baseurl$baseurl() ,
-                            "api/32/dataSetReport" ,
-                            "/custom" ,
-                            "?filter=&ds=" ,
-                          info$value ,
-                            "&pe=2020&ou=ImspTQPwCqd&selectedUnitOnly=false"
-      )
-      
-      updateTextInput( session, 'datasetURL', value = url )
-    
-    }
-  
-  })
-  
-
-  getPage<-reactive({
-    
-    req( input$datasetURL )
-    
-    username<-"admin"
-    password<-"district"
-    
-    # url =  'https://play.dhis2.org/2.33.0/api/32/dataSetReport/custom?filter=&ds=eZDhcZi6FLP&pe=2020&ou=ImspTQPwCqd&selectedUnitOnly=false'
-    url = input$datasetURL
-    
-    r = GET( url , authenticate( username, password ))
-    return( content(r, as = 'text')  %>% HTML() )
-  })
-  
-  output$frame<-renderUI({
-    x <- input$test  
-    getPage()
-  })
-  
-  
-  imageModal <- function() {
-    
-    modalDialog(
-      
-      # HTML( image.url ) 
-      
-      tags$iframe(style="height:800px; width:100%; scrolling=yes", 
-                  src= test.pdf 
-                  )
-      
-      #   renderPlot({
-      #     mtcars %>%
-      #       ggplot() +
-      #       geom_histogram(aes(x = cyl),binwidth = 2.5, fill = "skyblue", color = "black") +
-      #       theme_bw()
-      # })
-      ,  easyClose = TRUE 
-    )
-  }
 
   
-  # Parse formula and return list of data elements in formula
+  # Parse formula and return list of data elements in formula ####
   formulaElements = reactive({
     
     ft = input$formulaText
@@ -447,37 +327,37 @@ malaria_data_formulas <- function( input, output, session ,
     
     # Parse elements separated by mathematical operator
     formulaElements = strsplit( ft , " [-+*\\/] " ) %>% unlist %>% str_trim 
-
+    
     # Table of elements and categories
     formulaParts = 
       tibble( formulaElements = formulaElements ) %>%
-          mutate( 
+      mutate( 
         
-            dataElement = map( formulaElements , ~strsplit( .x , "].[" , fixed = TRUE ) %>% unlist ) %>%
-                      map( . , 1 ) %>%
-                      str_replace_all( . , "\\[|\\]" , "" ) ,
-                      
-            Categories = 
-                map( formulaElements , ~str_split( .x , fixed("].[") ) %>% unlist ) %>%
-                      map( . , 2 ) %>% 
-                      str_replace_all( . , "\\[|\\]" , "" ) 
-            
-            ) %>% select( dataElement , Categories ) %>% unique
+        dataElement = map( formulaElements , ~strsplit( .x , "].[" , fixed = TRUE ) %>% unlist ) %>%
+          map( . , 1 ) %>%
+          str_replace_all( . , "\\[|\\]" , "" ) ,
+        
+        Categories = 
+          map( formulaElements , ~str_split( .x , fixed("].[") ) %>% unlist ) %>%
+          map( . , 2 ) %>% 
+          str_replace_all( . , "\\[|\\]" , "" ) 
+        
+      ) %>% select( dataElement , Categories ) %>% unique
     
     mde =  mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
     
     # Filter MDE to formula elements:
     tableOfFormulaElements = 
-        bind_rows(
-          # elements and categories
-          inner_join( mde, formulaParts %>% filter( !Categories %in% "NULL" ) , 
-                      by = c("dataElement", "Categories" ) ) ,
-          # elements only
-          semi_join( mde, formulaParts %>% filter( Categories %in% "NULL"  ) , 
-                      by = "dataElement" ) 
-        ) %>%
-          arrange( dataElement , Categories )
-        
+      bind_rows(
+        # elements and categories
+        inner_join( mde, formulaParts %>% filter( !Categories %in% "NULL" ) , 
+                    by = c("dataElement", "Categories" ) ) ,
+        # elements only
+        semi_join( mde, formulaParts %>% filter( Categories %in% "NULL"  ) , 
+                   by = "dataElement" ) 
+      ) %>%
+      arrange( dataElement , Categories )
+    
     return( tableOfFormulaElements )
     
   })
@@ -485,8 +365,8 @@ malaria_data_formulas <- function( input, output, session ,
   # display data elements used in formula
   output$formulaElements = renderDT( 
     
-    formulaElements() %>%
-      select( -dataElement.id , -displayName , everything() ) ,
+    formulaElements() %>% 
+      select( -dataElement.id , -displayName , everything() ) , 
     
     rownames = FALSE , 
     server = TRUE, escape = FALSE, 
@@ -497,43 +377,15 @@ malaria_data_formulas <- function( input, output, session ,
   
   output$n_FormulaElements = renderText( paste( nrow( formulaElements()) , "data elements are selected.") )
   
-  # Formula summary data
-  # Formula expression
-  formulaExpression = reactive({
-    
-    ft = input$formulaText
-    
-    # Parse elements separated by mathematical operator
-    formulaElements = strsplit( ft , " [-+*\\/] " ) %>% unlist %>% str_trim 
-    
-    
-    mde = mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
-    
-    formulaExpression = formulaElements() %>%
-      left_join( mde , by = c('dataElement.id' , 'categoryOptionCombo.ids') ) %>%
-      mutate(
-        dataElement.id = paste0( "[" , dataElement.id , "]") ,
-        categoryOptionCombo.ids = paste0( "[" , categoryOptionCombo.ids , "]")
-      ) %>%
-      unite( "box" , dataElement.id , categoryOptionCombo.ids, sep = ".", remove = TRUE, na.rm = FALSE )
-    
-    
-  })
-  
-  output$formulaExpression = renderText( formulaExpression() )
   
   
-  
-  
-  # download data button.  
-  
-  dd = eventReactive( input$downloadButton , {
+  # download data button.  ####
+  dd = eventReactive( input$requestButton , {
     
     if (is.null( input$period ) ) showModal( modalDialog('please select a valid period') )
     if (is.null( input$orgUnits ) ) showModal( modalDialog('please select a valid orgUnit level') )
     
     baseurl = login_baseurl$baseurl()  
-    
     de = formulaElements() %>% 
       select( dataElement.id , categoryOptionCombo.ids  ) %>% 
       mutate( de.cat = paste( dataElement.id %>% str_trim, 
@@ -544,9 +396,7 @@ malaria_data_formulas <- function( input, output, session ,
       paste( collapse = ";")
 
     periods = input$period 
-    
     orgUnits =  input$orgUnits
-    
     aggregationType = 'DEFAULT' 
     
     # print( baseurl ); print( de ); print( periods ) ; print( orgUnits ); print( aggregationType )
@@ -557,35 +407,35 @@ malaria_data_formulas <- function( input, output, session ,
     
     output$apiUrl = renderText( url )
 
-    # Fetch data
+    # Fetch data ####
     fetch <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
       
       url = api_url( baseurl. , de. , periods. , orgUnits. , aggregationType. )
       
       fetch = retry( get( url , .print = TRUE )[[1]] ) # if time-out or other error, will retry 
-    
+      
       # if returns a data frame of values (e.g. not 'server error'), then keep
       if ( is.data.frame( fetch ) ){ 
-      
+        
         d = fetch %>% 
           select( -storedBy, -created, -lastUpdated, -comment ) %>%
           rename( dataElement.id = dataElement , 
                   categoryOptionCombo.ids = categoryOptionCombo 
-                  ) %>%
+          ) %>%
           left_join( formulaElements() %>% 
-                        select( dataElement, dataElement.id , 
-                                Categories, categoryOptionCombo.ids ) %>% 
+                       select( dataElement, dataElement.id , 
+                               Categories, categoryOptionCombo.ids ) %>% 
                        mutate( dataElement.id = dataElement.id %>% str_trim ,
                                categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )  ,
-                      by = c( "dataElement.id" , "categoryOptionCombo.ids" )
-                      ) %>%
+                     by = c( "dataElement.id" , "categoryOptionCombo.ids" )
+          ) %>%
           left_join( ous() %>% 
                        select( id, name, level, levelName )  %>% 
                        rename( orgUnit = id , orgUnitName = name ) ,
                      by = 'orgUnit' 
-                     )  
+          )  
         
-      
+        
       } else {
         
         d = tibble( 
@@ -602,6 +452,7 @@ malaria_data_formulas <- function( input, output, session ,
       return( d )
     }
     
+    
       d.sum = fetch(  baseurl , de , periods , orgUnits , "SUM" ) 
       
       d.count = fetch(  baseurl , de , periods , orgUnits , "COUNT" ) 
@@ -611,10 +462,10 @@ malaria_data_formulas <- function( input, output, session ,
         d = d.count %>% 
           rename( COUNT = value ) %>%
           full_join( d.sum %>% rename( SUM = value ) ,
-                     by = c("dataElement", "dataElement.id", "Categories" , "categoryOptionCombo.ids", "period", "orgUnit" , 'orgUnitName', 'level', 'levelName'  )
+                     by = c("dataElement", "dataElement.id", "Categories" , "categoryOptionCombo.ids", "period", "orgUnit" )
                      )  %>%
-          select( dataElement, Categories , orgUnitName, levelName,  period,  COUNT , SUM , dataElement.id, categoryOptionCombo.ids , orgUnit , level  ) %>%
-          arrange( dataElement , Categories , desc( period ) , level )
+          select( dataElement, Categories , orgUnit, period,  COUNT , SUM , dataElement.id, categoryOptionCombo.ids ) %>%
+          arrange( dataElement , Categories , orgUnit , desc( period ) )
         
       } else{ 
         
@@ -629,7 +480,7 @@ malaria_data_formulas <- function( input, output, session ,
       
    })
   
-  # display formula data
+  # display formula data ####
   output$formulaData = renderDT( 
     
     dd() , 
@@ -641,7 +492,6 @@ malaria_data_formulas <- function( input, output, session ,
     options = DToptions_no_buttons
     )
   
-  
   # empty table if formula elements change
   # observeEvent( formulaElements(), {  output$formulaData = renderDT() } )
 
@@ -651,8 +501,7 @@ malaria_data_formulas <- function( input, output, session ,
   metadata = reactive({  tibble(
     `Formula Name` = input$formulaName ,
     Period = input$period ,
-    `Organization Unit Levels` = input$orgUnits ,
-    Downloaded = Sys.Date()
+    `Organization Unit Levels` = input$orgUnits
   )
 })
 
@@ -662,9 +511,10 @@ malaria_data_formulas <- function( input, output, session ,
   )
   })
   
+  # Download formula data ####
   output$downloadFormulaData <- downloadHandler(
     
-    filename = paste0( input$formulaName , "_" , Sys.Date()  , ".xlsx"  ) ,
+    filename = paste0( input$formulaName , Sys.Date()  ,".xlsx"  ) ,
 
     content = function( file ) {
       
@@ -689,7 +539,7 @@ malaria_data_formulas <- function( input, output, session ,
   
   output$downloadFormulas <- downloadHandler(
     
-    filename = paste0( "Formulas" , "_" , Sys.Date()  , ".xlsx" ) ,
+    filename = paste0( "Formulas" , Sys.Date()  ,".xlsx" ) ,
     
     content = function( file ) {
       
@@ -708,5 +558,45 @@ malaria_data_formulas <- function( input, output, session ,
     }
   )
   
+
+  # Create formula dataset from formula data  ####
+  
+  formula_dataset = reactive({ 
+    
+    req( dd() )
+    
+    # d = dd() %>% 
+    #   select( orgUnit, period , dataElement.id , categoryOptionCombo.ids , SUM ) %>% 
+    #   mutate( 
+    #     # dataElement.id = paste0( "[" , dataElement.id , "]") ,
+    #     # categoryOptionCombo.ids = paste0( "[" , categoryOptionCombo.ids , "]") ,
+    #     SUM = as.numeric( SUM )
+    #   ) %>%
+    #   unite( "box" , dataElement.id , categoryOptionCombo.ids, sep = ".", remove = TRUE, na.rm = FALSE ) %>%
+    #   complete( orgUnit, period , box , fill = list( SUM = 0 ) ) %>%
+    #   pivot_wider( 
+    #     names_from = box,
+    #     values_from = SUM ) 
+    # 
+    #   f = "bqK6eSIwo3h.pq2XI5kz2BY + bqK6eSIwo3h.PT59n8BQbqM"
+    #   
+    #   
+    #   formula_dataset = d %>% group_by( orgUnit, period ) %>%
+    #     summarise( sum = eval( parse( text  = f ) ) )
+      
+      return( dd() )
+  
+  })
+  
+  # Display formula dataset ####
+  output$formulaDataset = DT::renderDT( 
+    
+    formula_dataset() ,
+    
+    rownames = FALSE, 
+    filter = 'top' ,
+    selection = list( mode='single' ) ,
+    options = DToptions_with_buttons()
+  ) 
 
 }

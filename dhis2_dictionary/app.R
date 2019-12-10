@@ -220,8 +220,7 @@ server <-  function(input, output, session){
    
    malaria_data_formulas = callModule( malaria_data_formulas , "formulas" ,
                                       malariaDataElements = malaria_data_elements ,
-                                      orgUnits = orgUnits , 
-                                      orgUnitLevels = orgUnitLevels , 
+                                      orgUnits = orgUnits ,  
                                       login_baseurl = login_baseurl )
    
 }
