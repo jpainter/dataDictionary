@@ -525,3 +525,64 @@ api_last12months_national_data = function(
   
   return( data )
 }
+
+### Translate Formula Function  ####
+translate_formula = function( f , elements , translate_from , translate_to , brackets = FALSE ){
+  
+  # if ( translate_to %in% 'str' ){ var = "id" }
+  
+  # formula elements
+  elements.cc = elements %>% select( categoryOptionCombo.ids, Categories ) %>% 
+    mutate( id = categoryOptionCombo.ids %>% str_trim(), str = Categories %>% str_trim()) %>% 
+    select( id, str )
+  
+  elements.de = elements %>% select( dataElement.id, dataElement ) %>% 
+    mutate( id = dataElement.id %>% str_trim(), str = dataElement %>% str_trim()) %>% 
+    select( id, str ) %>% unique()
+  
+  # identify all text between two brackets
+  reg1 = "\\[(.*?)\\]"
+  extract1 = str_extract_all( f , reg1 ) %>% unlist %>% gsub( "\\[|\\]" , "", . )
+  loc1 = str_locate_all( f , reg1 )[[1]] %>% as_tibble()
+  all_text = tibble( start = loc1$start , end = loc1$end,  {{ translate_from }} :=  extract1 )
+  # all_text
+  
+  # identify text between two brackets that follows a period
+  reg2 = "\\.\\[(.*?)\\]"
+  extract2 = str_extract_all( f , reg2 ) %>% unlist %>% gsub( "\\[|\\]" , "", . ) %>% substring(., 2)
+  loc2 = str_locate_all( f , reg2 )[[1]] %>% as_tibble() 
+  cc_text = tibble( start = loc2$start , end = loc2$end, {{ translate_from }} := extract2 )
+  # cc_text
+  
+  
+  de = anti_join( all_text, cc_text , by = 'end' ) # de
+  coc = anti_join( all_text, de , by = 'end' ) # coc
+  
+  trans = bind_rows( 
+    de %>% inner_join( elements.de  ) ,
+    coc %>% inner_join( elements.cc )
+  ) %>% arrange( - start )
+  # trans
+  
+  l = nrow( trans )
+  
+  for ( .x in 1:l ){
+    
+    
+    if ( brackets ){
+      
+      value = paste0( "[" , trans[ .x ,] %>% pull( {{ translate_to }} ) , "]" )
+      
+    } else {
+      
+      value = trans[ .x ,] %>% pull( {{ translate_to }} )
+    } 
+    
+    str_sub( f , start = trans$start[.x] , end = trans$end[.x]  ) <-  value
+    
+  }
+  
+  return( f )
+  
+}
+
