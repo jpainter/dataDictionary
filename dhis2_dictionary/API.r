@@ -542,27 +542,31 @@ translate_formula = function( f , elements , translate_from , translate_to , bra
   
   # identify all text between two brackets
   reg1 = "\\[(.*?)\\]"
-  extract1 = str_extract_all( f , reg1 ) %>% unlist %>% gsub( "\\[|\\]" , "", . )
+  extract1 = str_extract_all( f , reg1 ) %>% unlist %>% 
+    gsub( "\\[|\\]" , "", . ) %>% str_trim()
   loc1 = str_locate_all( f , reg1 )[[1]] %>% as_tibble()
   all_text = tibble( start = loc1$start , end = loc1$end,  {{ translate_from }} :=  extract1 )
   # all_text
   
   # identify text between two brackets that follows a period
   reg2 = "\\.\\[(.*?)\\]"
-  extract2 = str_extract_all( f , reg2 ) %>% unlist %>% gsub( "\\[|\\]" , "", . ) %>% substring(., 2)
+  extract2 = str_extract_all( f , reg2 ) %>% unlist %>% 
+    gsub( "\\[|\\]" , "", . ) %>% substring(., 2) %>% str_trim()
   loc2 = str_locate_all( f , reg2 )[[1]] %>% as_tibble() 
   cc_text = tibble( start = loc2$start , end = loc2$end, {{ translate_from }} := extract2 )
   # cc_text
   
   
-  de = anti_join( all_text, cc_text , by = 'end' ) # de
-  coc = anti_join( all_text, de , by = 'end' ) # coc
+  de = anti_join( all_text, cc_text , by = 'end' ) 
+  coc = anti_join( all_text, de , by = 'end' ) 
   
   trans = bind_rows( 
     de %>% inner_join( elements.de  ) ,
     coc %>% inner_join( elements.cc )
   ) %>% arrange( - start )
   # trans
+  
+  # print( trans )
   
   l = nrow( trans )
   

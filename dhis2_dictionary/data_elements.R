@@ -268,6 +268,10 @@ data_elements <- function( input, output, session , login_baseurl ) {
               dataElement.id , categoryCombo.id , categoryOptionCombo.ids, dataSet.id , dataElementGroups.id ,
               n_categoryOptions, categoryCombo ) %>%
       
+      mutate( dataElement = dataElement %>% str_trim() , 
+              Categories = Categories %>% str_trim()
+              ) %>%
+      
       # collapse all muliptle entries for each data element
       group_by( dataElement.id , dataElement ) %>%
       

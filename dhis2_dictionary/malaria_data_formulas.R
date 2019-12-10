@@ -123,6 +123,8 @@ malaria_data_formulas_UI <- function( id ) {
 
                 tabPanel("Formula Dataset",
                          
+                         textOutput( ns('formulaExpression') ) ,
+                         
                          h2('Final Formula Dataset') ,
                          
                          DTOutput( ns('formulaDataset') ) 
@@ -279,7 +281,7 @@ malaria_data_formulas <- function( input, output, session ,
     options = DToptions_no_buttons() 
   ) 
   
-  # Add element to formula when clicked
+  # Add element to formula when clicked ####
   observeEvent( input$malariaDataElements_rows_selected , {
     
     row = input$malariaDataElements_rows_selected
@@ -291,15 +293,15 @@ malaria_data_formulas <- function( input, output, session ,
       value = if ( input$showCategoryOptions ){
         
         d = mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
-        de = d()$dataElement[ row ]
-        de.cc = d$Categories[ row ]
+        de = d$dataElement[ row ] %>% str_trim
+        de.cc = d$Categories[ row ] %>% str_trim
         paste0( "[" , de , "].[" , de.cc , "]")
         
       } else {
         
-        de.id = mde()$dataElement.id[ row ]
-        de = mde()$dataElement[ row ]
-        de 
+        de.id = mde()$dataElement.id[ row ] %>% str_trim
+        de = mde()$dataElement[ row ] %>% str_trim
+        paste0( "[" , de , "]" )
       }
         
       formula.value = ifelse( nchar( input$formulaText ) == 0  ,
@@ -335,16 +337,21 @@ malaria_data_formulas <- function( input, output, session ,
         
         dataElement = map( formulaElements , ~strsplit( .x , "].[" , fixed = TRUE ) %>% unlist ) %>%
           map( . , 1 ) %>%
-          str_replace_all( . , "\\[|\\]" , "" ) ,
+          str_replace_all( . , "\\[|\\]" , "" ) %>%
+          str_trim() ,
         
         Categories = 
           map( formulaElements , ~str_split( .x , fixed("].[") ) %>% unlist ) %>%
           map( . , 2 ) %>% 
-          str_replace_all( . , "\\[|\\]" , "" ) 
+          str_replace_all( . , "\\[|\\]" , "" ) %>%
+          str_trim() 
         
       ) %>% select( dataElement , Categories ) %>% unique
     
-    mde =  mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
+    mde =  mde()  %>% 
+      separate_rows( Categories , categoryOptionCombo.ids, sep = ";" ) %>%
+      mutate( Categories = Categories %>% str_trim  ,
+              categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )
     
     # Filter MDE to formula elements:
     tableOfFormulaElements = 
@@ -561,34 +568,55 @@ malaria_data_formulas <- function( input, output, session ,
 
   # Create formula dataset from formula data  ####
   
+  formula_expression = reactive({
+    
+    # req( input$formulaText )
+
+    print( input$formulaText )
+    print( nrow( formulaElements() ) )
+    
+    
+    f = translate_formula( input$formulaText ,
+                           elements = formulaElements() ,
+                           translate_from = str ,
+                           translate_to = id ,
+                           brackets = FALSE )
+    
+    print( f )
+
+    return( f )
+  })
+  
   formula_dataset = reactive({ 
     
     req( dd() )
     
-    # d = dd() %>% 
-    #   select( orgUnit, period , dataElement.id , categoryOptionCombo.ids , SUM ) %>% 
-    #   mutate( 
-    #     # dataElement.id = paste0( "[" , dataElement.id , "]") ,
-    #     # categoryOptionCombo.ids = paste0( "[" , categoryOptionCombo.ids , "]") ,
-    #     SUM = as.numeric( SUM )
-    #   ) %>%
-    #   unite( "box" , dataElement.id , categoryOptionCombo.ids, sep = ".", remove = TRUE, na.rm = FALSE ) %>%
-    #   complete( orgUnit, period , box , fill = list( SUM = 0 ) ) %>%
-    #   pivot_wider( 
-    #     names_from = box,
-    #     values_from = SUM ) 
-    # 
-    #   f = "bqK6eSIwo3h.pq2XI5kz2BY + bqK6eSIwo3h.PT59n8BQbqM"
-    #   
-    #   
-    #   formula_dataset = d %>% group_by( orgUnit, period ) %>%
-    #     summarise( sum = eval( parse( text  = f ) ) )
+    d = dd() %>%
+      select( orgUnit, period , dataElement.id , categoryOptionCombo.ids , SUM ) %>%
+      mutate(
+        # dataElement.id = paste0( "[" , dataElement.id , "]") ,
+        # categoryOptionCombo.ids = paste0( "[" , categoryOptionCombo.ids , "]") ,
+        SUM = as.numeric( SUM )
+      ) %>%
+      unite( "box" , dataElement.id , categoryOptionCombo.ids, sep = ".", remove = TRUE, na.rm = FALSE ) %>%
+      complete( orgUnit, period , box , fill = list( SUM = 0 ) ) %>%
+      pivot_wider(
+        names_from = box,
+        values_from = SUM )
+
+    
+      formula_dataset = d %>% group_by( orgUnit, period ) %>%
+        summarise( sum = eval( parse( text  = formula_expression() ) ) )
       
-      return( dd() )
+      return( formula_dataset )
   
   })
   
+  
   # Display formula dataset ####
+  
+  output$formulaExpression = renderText( formula_expression() )
+  
   output$formulaDataset = DT::renderDT( 
     
     formula_dataset() ,
