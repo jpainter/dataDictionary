@@ -190,7 +190,7 @@ malaria_data_formulas <- function( input, output, session ,
 
   } )
   
-  # Update formulas ####
+  # Update saved formulas ####
   observeEvent( input$updateFormulas , {
 
     f = which( formula_table()$Formula.Name %in% input$formulaName )
@@ -322,7 +322,7 @@ malaria_data_formulas <- function( input, output, session ,
  
 
   
-  # Parse formula and return list of data elements in formula ####
+  # Formula data elements ####
   formulaElements = reactive({
     
     ft = input$formulaText
