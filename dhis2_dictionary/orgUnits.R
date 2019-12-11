@@ -20,6 +20,7 @@ buttonList = function( file_name = paste( 'downloaded' , Sys.Date() ) ){
 DToptions_with_buttons = function(...){
   list( autoWidth = TRUE , 
         scrollX = TRUE  ,
+        columnDefs = list(list(className = 'dt-right' , targets="_all" ) ) ,
         dom = 'Bfrtip' ,
         buttons = buttonList(...)
   )
@@ -27,7 +28,8 @@ DToptions_with_buttons = function(...){
 
 DToptions_no_buttons = function(...){
   list( autoWidth = TRUE , 
-        scrollX = TRUE  
+        scrollX = TRUE  ,
+        columnDefs = list(list(className = 'dt-right' , targets="_all" ) ) 
   )
 }
 

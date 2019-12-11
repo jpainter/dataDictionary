@@ -254,6 +254,7 @@ malaria_data_formulas <- function( input, output, session ,
   DToptions_with_buttons = function(...){
     list( autoWidth = TRUE , 
           scrollX = TRUE  ,
+          columnDefs = list(list(className = 'dt-right' , targets="_all" ) ) ,
           dom = 'Bfrtip' ,
           buttons = buttonList(...)
     )
@@ -261,7 +262,8 @@ malaria_data_formulas <- function( input, output, session ,
   
   DToptions_no_buttons = function(...){
     list( autoWidth = TRUE , 
-          scrollX = TRUE  
+          scrollX = TRUE  ,
+          columnDefs = list(list(className = 'dt-right', targets="_all" ) ) 
     )
   }
   

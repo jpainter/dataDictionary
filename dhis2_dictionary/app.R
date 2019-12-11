@@ -5,27 +5,27 @@
 
 # install and load libraries ####
 
-libraries = as.character(
-  quote( c( shiny, shinydashboard, shinyBS , plotly, shinyLP , tidyverse, googleVis, scales ,
-               knitr, rlang, stringi, tidyselect, jsonlite, httr, curl, assertthat, DT ,
-            knitrProgressBar , futile.logger , utils , textutils , readxl , openxlsx ) )[-1]
-)
-
+# libraries = as.character(
+#   quote( c( shiny, shinydashboard, shinyBS , plotly, shinyLP , tidyverse, googleVis, scales ,
+#                knitr, rlang, stringi, tidyselect, jsonlite, httr, curl, assertthat, DT ,
+#             knitrProgressBar , futile.logger , utils , textutils , readxl , openxlsx ) )[-1]
+# )
+# 
 
 # Function to test if package is installed
-pkgTest <- function( package.list = libraries ){
-
-  missing.packages = setdiff( package.list , rownames( installed.packages() ) )
-  if ( length( missing.packages ) > 0 ) install.packages( missing.packages , dependencies = TRUE )
-}
-
-# Test if packages installed
-pkgTest( libraries )
-
-# load the packages
-suppressMessages(
-  lapply( libraries , require  , character.only = TRUE)
-)
+# pkgTest <- function( package.list = libraries ){
+# 
+#   missing.packages = setdiff( package.list , rownames( installed.packages() ) )
+#   if ( length( missing.packages ) > 0 ) install.packages( missing.packages , dependencies = TRUE )
+# }
+# 
+# # Test if packages installed
+# pkgTest( libraries )
+# 
+# # load the packages
+# suppressMessages(
+#   lapply( libraries , require  , character.only = TRUE)
+# )
 
 library( shiny )
 library( shinydashboard )
