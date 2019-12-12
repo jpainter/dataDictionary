@@ -388,13 +388,66 @@ malaria_data_formulas <- function( input, output, session ,
   
   
   
-  # download data button.  ####
+  # Request data button.  ####
+  # Fetch data ####
+  fetch <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
+    
+    url = api_url( baseurl. , de. , periods. , orgUnits. , aggregationType. )
+    
+    fetch = retry( get( url , .print = TRUE )[[1]] ) # if time-out or other error, will retry 
+    
+    # if returns a data frame of values (e.g. not 'server error'), then keep
+    if ( is.data.frame( fetch ) ){ 
+      
+      data.return =  fetch %>% select( -storedBy, -created, -lastUpdated, -comment )
+      
+    } else {
+      
+      data.return  = tibble( 
+        dataElement = de. , 
+        categoryOptionCombo = NULL , 
+        period =  periods. ,
+        orgUnit =  orgUnits. ,
+        aggregationType = aggregationType. ,
+        value = NA
+      )
+      
+      print( "no records" )
+    }
+    
+    return( data.return )
+  }
+  
+  translate_fetch = function( df ){
+    
+      df %>%
+      
+      rename( dataElement.id = dataElement , 
+              categoryOptionCombo.ids = categoryOptionCombo 
+      ) %>%
+      
+      left_join( formulaElements() %>% 
+                   select( dataElement, dataElement.id , 
+                           Categories, categoryOptionCombo.ids ) %>% 
+                   mutate( dataElement.id = dataElement.id %>% str_trim ,
+                           categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )  ,
+                 by = c( "dataElement.id" , "categoryOptionCombo.ids" )
+      ) %>%
+      
+      left_join( ous() %>% 
+                   select( id, name, level, levelName )  %>% 
+                   rename( orgUnit = id , orgUnitName = name ) ,
+                 by = 'orgUnit' 
+      )  
+  }
+  
   dd = eventReactive( input$requestButton , {
     
     if (is.null( input$period ) ) showModal( modalDialog('please select a valid period') )
     if (is.null( input$orgUnits ) ) showModal( modalDialog('please select a valid orgUnit level') )
     
     baseurl = login_baseurl$baseurl()  
+    
     de = formulaElements() %>% 
       select( dataElement.id , categoryOptionCombo.ids  ) %>% 
       mutate( de.cat = paste( dataElement.id %>% str_trim, 
@@ -416,71 +469,25 @@ malaria_data_formulas <- function( input, output, session ,
     
     output$apiUrl = renderText( url )
 
-    # Fetch data ####
-    fetch <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
+    d.sum = fetch(  baseurl , de , periods , orgUnits , "SUM" ) %>% translate_fetch()
       
-      url = api_url( baseurl. , de. , periods. , orgUnits. , aggregationType. )
+    d.count = fetch(  baseurl , de , periods , orgUnits , "COUNT" ) %>% translate_fetch()
       
-      fetch = retry( get( url , .print = TRUE )[[1]] ) # if time-out or other error, will retry 
-      
-      # if returns a data frame of values (e.g. not 'server error'), then keep
-      if ( is.data.frame( fetch ) ){ 
-        
-        d = fetch %>% 
-          select( -storedBy, -created, -lastUpdated, -comment ) %>%
-          rename( dataElement.id = dataElement , 
-                  categoryOptionCombo.ids = categoryOptionCombo 
-          ) %>%
-          left_join( formulaElements() %>% 
-                       select( dataElement, dataElement.id , 
-                               Categories, categoryOptionCombo.ids ) %>% 
-                       mutate( dataElement.id = dataElement.id %>% str_trim ,
-                               categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )  ,
-                     by = c( "dataElement.id" , "categoryOptionCombo.ids" )
-          ) %>%
-          left_join( ous() %>% 
-                       select( id, name, level, levelName )  %>% 
-                       rename( orgUnit = id , orgUnitName = name ) ,
-                     by = 'orgUnit' 
-          )  
-        
-        
-      } else {
-        
-        d = tibble( 
-          dataElement = de. , 
-          period =  periods. ,
-          orgUnit =  orgUnits. ,
-          aggregationType = aggregationType. ,
-          value = NA
-        )
-        
-        print( "no records" )
-      }
-      
-      return( d )
-    }
-    
-    
-      d.sum = fetch(  baseurl , de , periods , orgUnits , "SUM" ) 
-      
-      d.count = fetch(  baseurl , de , periods , orgUnits , "COUNT" ) 
-      
-      if ( nrow( d.sum ) > 0 & nrow( d.count ) > 0 ){ 
+    if ( nrow( d.sum ) > 0 & nrow( d.count ) > 0 ){ 
         
         d = d.count %>% 
           rename( COUNT = value ) %>%
           full_join( d.sum %>% rename( SUM = value ) ,
-                     by = c("dataElement", "dataElement.id", "Categories" , "categoryOptionCombo.ids", "period", "orgUnit" )
+                     by = c("dataElement", "dataElement.id", "Categories" , "categoryOptionCombo.ids", "period", "orgUnit", "orgUnitName" ,  "level" , "levelName")
                      )  %>%
-          select( dataElement, Categories , orgUnit, period,  COUNT , SUM , dataElement.id, categoryOptionCombo.ids ) %>%
-          arrange( dataElement , Categories , orgUnit , desc( period ) )
+          select( dataElement, Categories , orgUnitName, levelName , period,  COUNT , SUM , dataElement.id, categoryOptionCombo.ids , orgUnit, level ) %>%
+          arrange( dataElement , Categories , desc( period ) , level )
         
       } else{ 
         
         d = NULL }
       
-      print( paste( periods, ":" , nrow(fetch), "records." ) )
+      print( paste( periods, ":" , nrow( d ), "records." ) )
 
       # move focus to tab with dowloaded data
       updateTabItems(session, "Malaria Data Formulas" , "Download formula data" )
@@ -489,7 +496,7 @@ malaria_data_formulas <- function( input, output, session ,
       
    })
   
-  # display formula data ####
+  # display requested formula data ####
   output$formulaData = renderDT( 
     
     dd() , 
@@ -594,24 +601,27 @@ malaria_data_formulas <- function( input, output, session ,
     req( dd() )
     
     d = dd() %>%
-      select( orgUnit, period , dataElement.id , categoryOptionCombo.ids , SUM ) %>%
+      select( levelName, orgUnit , orgUnitName, period , dataElement.id , categoryOptionCombo.ids , SUM ) %>%
       mutate(
         # dataElement.id = paste0( "[" , dataElement.id , "]") ,
         # categoryOptionCombo.ids = paste0( "[" , categoryOptionCombo.ids , "]") ,
         SUM = as.numeric( SUM )
       ) %>%
-      unite( "box" , dataElement.id , categoryOptionCombo.ids, sep = ".", remove = TRUE, na.rm = FALSE ) %>%
+      unite( "box" , dataElement.id , categoryOptionCombo.ids, 
+             sep = ".", remove = TRUE, na.rm = FALSE 
+             ) %>%
       complete( orgUnit, period , box , fill = list( SUM = 0 ) ) %>%
       pivot_wider(
         names_from = box,
         values_from = SUM )
 
     
-      formula_dataset = d %>% group_by( orgUnit, period ) %>%
+      formula_dataset = d %>%
+        group_by( levelName , orgUnitName, period  ) %>%
         summarise( sum = eval( parse( text  = formula_expression() ) ) )
       
       return( formula_dataset )
-  
+
   })
   
   
@@ -619,14 +629,14 @@ malaria_data_formulas <- function( input, output, session ,
   
   output$formulaExpression = renderText( formula_expression() )
   
-  output$formulaDataset = DT::renderDT( 
-    
+  output$formulaDataset = DT::renderDT(
+
     formula_dataset() ,
-    
-    rownames = FALSE, 
+
+    rownames = FALSE,
     filter = 'top' ,
     selection = list( mode='single' ) ,
     options = DToptions_with_buttons()
-  ) 
+  )
 
 }
