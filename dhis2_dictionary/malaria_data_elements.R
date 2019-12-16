@@ -132,8 +132,12 @@ malaria_data_elements_UI <- function( id ) {
 )}
 
 # Server function ####
-malaria_data_elements <- function( input, output, session , data_elements ) {
+malaria_data_elements <- function( input, output, session , data_elements , 
+                                   login_baseurl  ){ 
 
+  login = reactive({ login_baseurl$login() })
+  baseurl = reactive({ login_baseurl$baseurl() })
+  
   # data elements
   de = reactive({ data_elements$dataDictionary() })
 
@@ -364,7 +368,7 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
     
     # "http://www.pdf995.com/samples/pdf.pdf#page=4"
     
-    paste0( login_baseurl$baseurl() ,
+    paste0( baseurl() ,
             "api/32/dataSetReport.pdf?filter=&ds=" ,
             "Nyh6laLdBEJ" ,
             "&pe=2020&ou=ImspTQPwCqd"
@@ -383,7 +387,7 @@ malaria_data_elements <- function( input, output, session , data_elements ) {
     
     if ( !(is.null( info$value ) ) ){
       
-      url =       paste0( login_baseurl$baseurl() ,
+      url =       paste0( baseurl() ,
                           "api/32/dataSetReport" ,
                           "/custom" ,
                           "?filter=&ds=" ,

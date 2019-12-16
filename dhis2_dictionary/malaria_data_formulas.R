@@ -141,6 +141,9 @@ malaria_data_formulas <- function( input, output, session ,
                                    orgUnits, 
                                    login_baseurl  ){
   
+  login = reactive({ login_baseurl$login() })
+  baseurl = reactive({ login_baseurl$baseurl() })
+  
   # malaria data elements
   mde = reactive({ malariaDataElements$malariaDataElements() }) 
   
