@@ -79,7 +79,17 @@ orgUnits_UI <- function( id ) {
                          
                          style = "overflow-x: scroll;"
                          
-                         ) 
+                         ) ,
+                
+                tabPanel("geoFeatures", 
+                         
+                        column( 6, DTOutput( ns( 'geoFeatures' ) ) ) ,
+                         
+                        column( 6, leafletOutput( ns("geoFeatures_map") ) )
+                         
+                        
+                         
+                ) 
     )
   )
 }
@@ -97,27 +107,27 @@ org_units <- function( input, output, session , login_baseurl) {
  
 
   orgUnits = reactive({
-    
+
     if (  login() ){
-      
+
       showModal(modalDialog("Downloading list of organisation units", footer=NULL))
-      
+
       # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
       # if available, use resources method
       url <- paste0( baseurl() ,"api/organisationUnits.json?fields=:all&paging=false")
       cols = c( 'level' , 'name', 'id', 'shortName' , 'displayName', 'displayShortName', "openingDate" , "leaf" , "parent" )
-      
-      ous =  get( url )[[1]] %>% select( !!cols ) %>% 
+
+      ous =  get( url )[[1]] %>% select( !!cols ) %>%
         left_join( orgUnitLevels() %>% select( level, levelName ) , by = 'level' ) %>%
         select( level, levelName , everything() ) %>%
         arrange( level )
-      
+
       removeModal()
-      
+
       return( ous )
-      
+
     } else { "Unable to login to server" }
-  }) 
+  })
   
   n_orgUnits_level = reactive({ orgUnits() %>% count( level ) })
     
@@ -163,6 +173,56 @@ org_units <- function( input, output, session , login_baseurl) {
   
   
   output$n_ou = renderText( n_orgUnits() )
+  
+  # download geo features ####
+  ## for description of properties, see table 1.59, 
+  ## https://docs.dhis2.org/2.22/en/developer/html/ch01s32.html
+  
+  geoFeatures_download = function( level , .pb = NULL ){
+    
+    print( "downloading geoFeatures level") ; print( level )
+    
+    update_progress(.pb)
+    
+    url<-paste0( baseurl() , "api/geoFeatures.json?ou=ou:LEVEL-", level, "&paging=false")
+    
+    print( url )
+    
+    fromJSON( content(GET(url), "text" ) ) %>% as_tibble()
+  }
+  
+  geoFeatures = reactive({
+    
+    if (  login() ){
+      
+      showModal(modalDialog("Downloading list of geoFeatures (coordinates)", footer=NULL))
+      
+      pb <- progress_estimated( 9 )
+      geoFeatures_from_server = map( 0:8 , ~geoFeatures_download(.x, pb ) )
+      geoFeatures = reduce( geoFeatures_from_server, bind_rows )
+      
+      # # remove potential duplicates
+      geoFeatures = geoFeatures[ !is.na(geoFeatures$id) ,]
+      # # geoFeatures = geoFeatures[ !duplicated(geoFeatures) ,]
+      
+      removeModal()
+      
+      return( geoFeatures )
+      
+    } else { "Unable to login to server" }
+  })
+  
+  output$geoFeatures = renderDT( geoFeatures() )
+
+  # geoFeatures MAP
+  output$geoFeatures_map = renderLeaflet({
+    polygons =  geoFeatures() %>% filter( ty %in% 2 )
+    points =  geoFeatures() %>% filter( ty %in% 1 )
+    # tm <- tm_shape()  
+    #   + tm_polygons( 'polygons', legend.title = "Administrative Areas")
+    # tmap_leaflet(tm)
+  })
+
 
 # output tables ####  
 
