@@ -1,39 +1,5 @@
 # data_elements_module
 
-# Helper functions
-# DT table options...
-buttonList = function( file_name = paste( 'downloaded' , Sys.Date() ) ){
-  list( 'copy', 'print', 
-        list(
-        
-          extend = 'collection', 
-          buttons = list( 
-            list( extend = 'csv'  , filename = file_name) , 
-            list( extend = 'excel'  , filename = file_name) ,
-            list( extend = 'pdf' , filename = file_name)  
-          ) ,
-          text = 'Download' 
-        )
-  )
-}
-
-DToptions_with_buttons = function(...){
-  list( autoWidth = TRUE , 
-        scrollX = TRUE  ,
-        columnDefs = list(list(className = 'dt-right' , targets="_all" ) ) ,
-        dom = 'Bfrtip' ,
-        buttons = buttonList(...)
-  )
-}
-
-DToptions_no_buttons = function(...){
-  list( autoWidth = TRUE , 
-        scrollX = TRUE  ,
-        columnDefs = list(list(className = 'dt-right' , targets="_all" ) ) 
-  )
-}
-
-
 # JSON helper function ####
 ## gets json text from url and converts to data frame 
 get = function( source_url , .print = TRUE , ...){
@@ -199,7 +165,8 @@ org_units <- function( input, output, session , login_baseurl) {
       
       pb <- progress_estimated( 9 )
       geoFeatures_from_server = map( 0:8 , ~geoFeatures_download(.x, pb ) )
-      geoFeatures = reduce( geoFeatures_from_server, bind_rows )
+      geoFeatures = reduce( geoFeatures_from_server, bind_rows ) %>%
+        select( -httpStatus , -httpStatusCode , -status , -message )
       
       # # remove potential duplicates
       geoFeatures = geoFeatures[ !is.na(geoFeatures$id) ,]
@@ -212,8 +179,27 @@ org_units <- function( input, output, session , login_baseurl) {
     } else { "Unable to login to server" }
   })
   
-  output$geoFeatures = renderDT( geoFeatures() )
+  output$geoFeatures = renderDT( 
+    geoFeatures(), 
+    
+    rownames = FALSE, 
+    filter = 'top' ,
+    extensions = 'Buttons' , 
+    options = list( 
+          # autoWidth = TRUE , 
+          scrollX = TRUE  ,
+          columnDefs = list( list( className = 'dt-right', 
+                                   targets = "_all"  ,
+                                   render = JS(
+                                     "function(data, type, row, meta) {",
+                                     "return type === 'display' && data.length > 6 ?",
+                                     "'<span title=\"' + data + '\">' + data.substr(0, 6) + '...</span>' : data;",
+                                     "}"))) 
+    ) ,
+    callback = JS('table.page(3).draw(false);')
+    )
 
+  
   # geoFeatures MAP
   output$geoFeatures_map = renderLeaflet({
     polygons =  geoFeatures() %>% filter( ty %in% 2 )
@@ -230,11 +216,14 @@ org_units <- function( input, output, session , login_baseurl) {
     
     orgUnitLevels_with_counts()  , 
     
-    class = 'white-space: nowrap', 
-    rownames = FALSE, 
+    # class = 'white-space: nowrap', 
+    rownames = FALSE , 
     extensions = 'Buttons' , 
     
-    options = DToptions_with_buttons( file_name = paste( 'OrgUnitLevels' , "_" , Sys.Date() ) )
+    options = 
+      list(
+      DToptions_with_buttons( file_name = paste( 'OrgUnitLevels' , "_" , Sys.Date() ) )
+      )
   )
   
   output$orgUnit_table = renderDT(
@@ -244,12 +233,12 @@ org_units <- function( input, output, session , login_baseurl) {
     rownames = FALSE, 
     filter = 'top' ,
     extensions = 'Buttons' , 
-    
     options = list( 
-      DToptions_with_buttons( file_name = paste( 'orgUnits' , "_" , Sys.Date() ) ) ,
-      lengthMenu = list(c(10, 25, -1), list('10', '25', 'All') )
+      DToptions_with_buttons( file_name = paste( 'orgUnits' , "_" , Sys.Date() ) )
     )
-  )
+
+    )
+
   
   
 # return ####

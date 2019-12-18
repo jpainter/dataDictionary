@@ -239,38 +239,6 @@ malaria_data_formulas <- function( input, output, session ,
   } )
   
  
-  # DT table options... ####
-  buttonList = function( file_name = paste( 'downloaded' , Sys.Date() ) ){
-    list( 'copy', 'print', 
-          list(
-            extend = 'collection', 
-            buttons = list( 
-              list( extend = 'csv'  , filename = file_name) , 
-              list( extend = 'excel'  , filename = file_name) ,
-              list( extend = 'pdf' , filename = file_name)  
-            ) ,
-            text = 'Download' 
-          )
-    )
-  }
-  
-  DToptions_with_buttons = function(...){
-    list( autoWidth = TRUE , 
-          scrollX = TRUE  ,
-          columnDefs = list(list(className = 'dt-right' , targets="_all" ) ) ,
-          dom = 'Bfrtip' ,
-          buttons = buttonList(...)
-    )
-  }
-  
-  DToptions_no_buttons = function(...){
-    list( autoWidth = TRUE , 
-          scrollX = TRUE  ,
-          columnDefs = list(list(className = 'dt-right', targets="_all" ) ) 
-    )
-  }
-  
-
   # Display table of malaria data elements ####
   output$malariaDataElements = DT::renderDT( 
     
@@ -392,7 +360,7 @@ malaria_data_formulas <- function( input, output, session ,
   
   
   # Request data button.  ####
-  # Fetch data ####
+
   fetch <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
     
     url = api_url( baseurl. , de. , periods. , orgUnits. , aggregationType. )
@@ -543,6 +511,7 @@ malaria_data_formulas <- function( input, output, session ,
       sheet2  <- addWorksheet( wb, sheetName = "Formula")
       sheet3  <- addWorksheet( wb, sheetName = "Formula Elements")
       sheet4  <- addWorksheet( wb, sheetName = "formulaData")
+      sheet5  <- addWorksheet( wb, sheetName = "summaryData")
 
       writeDataTable( wb, sheet1, metadata() , rowNames = FALSE)
       writeDataTable(  wb, sheet2, formula() , rowNames = FALSE)
@@ -550,6 +519,7 @@ malaria_data_formulas <- function( input, output, session ,
                         select( -dataElement.id , -displayName , everything() ) , 
                       rowNames = FALSE)
       writeDataTable( wb, sheet4, dd() , rowNames = FALSE)
+      writeDataTable( wb, sheet5, formula_dataset() , rowNames = FALSE)
       
       openxlsx::saveWorkbook( wb , file , overwrite = TRUE )   
       

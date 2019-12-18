@@ -62,6 +62,7 @@ source( 'orgUnits.R' )
 source( 'data_elements.R' )
 source( 'malaria_data_elements.R' )
 source( 'malaria_data_formulas.R' )
+source( 'DToptions.R')
 
 # setup ####
 
@@ -110,6 +111,12 @@ ui <- dashboardPage(
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
   ) ,
+  
+  tags$head(tags$style("
+  table.dataTable thead th {
+    padding: 8px 10px !important;
+  }
+")) ,
     
     tabItems(
       
@@ -204,13 +211,12 @@ tabItem(tabName = 'contact',
 # Define server logic #####
 server <-  function(input, output, session){
    
-  
   # stop shiny when browser closes
   session$onSessionEnded(function() {
     stopApp()
   })
   
-  # Load modules
+  # Load modules ####
   
    login_baseurl = callModule( login_info , "login" )
    
