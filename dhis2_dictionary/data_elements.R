@@ -444,7 +444,11 @@ data_elements <- function( input, output, session , login_baseurl ) {
     extensions = 'Buttons' , 
 
     options = DToptions_with_buttons( file_name = paste( 'dataElements' , "_" , Sys.Date() ) )
+<<<<<<< HEAD
 
+=======
+                                      )
+>>>>>>> 08edfa69be21907515b850d0c538ec8659e8043b
   )
   
   output$indicators = renderDT(
