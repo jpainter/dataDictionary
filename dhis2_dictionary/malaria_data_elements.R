@@ -352,7 +352,8 @@ malaria_data_elements <- function( input, output, session , data_elements ,
     
     rownames = FALSE , 
     filter = 'top' ,
-    server = TRUE, escape = FALSE, 
+    server = TRUE, 
+    escape = FALSE, 
     selection = list( mode='single' ) ,
     extensions = c('Buttons'), 
     options = DToptions_with_buttons( file_name = paste( 'malariaDataSets' , Sys.Date() )  ) 
@@ -467,12 +468,7 @@ malaria_data_elements <- function( input, output, session , data_elements ,
     rownames = FALSE, 
     filter = 'top' ,
     extensions = 'Buttons' , 
-    
-    options = list( autoWidth = TRUE , 
-                    scrollX = TRUE  ,
-                    dom = 'Bfrtip',
-                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
-    ) 
+    options = DToptions_with_buttons(paste( 'Malaria_dataElements' , "_" , Sys.Date() ))  
   )
   
   
@@ -483,12 +479,7 @@ malaria_data_elements <- function( input, output, session , data_elements ,
     rownames = FALSE, 
     filter = 'top' ,
     extensions = 'Buttons' , 
-    
-    options = list( autoWidth = TRUE , 
-                    scrollX = TRUE  ,
-                    dom = 'Bfrtip',
-                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
-                    ) 
+    options = DToptions_with_buttons(paste( 'Malaria_indicators' , "_" , Sys.Date() ))  
   )
   
   output$malariaDataSets = renderDT( 
@@ -498,12 +489,7 @@ malaria_data_elements <- function( input, output, session , data_elements ,
     rownames = FALSE, 
     filter = 'top' ,
     extensions = 'Buttons' , 
-    
-    options = list( autoWidth = TRUE , 
-                    scrollX = TRUE  ,
-                    dom = 'Bfrtip',
-                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
-    ) 
+    options = DToptions_with_buttons(paste( 'Malaria_datasets' , "_" , Sys.Date() ))  
   )
   
   # return ####

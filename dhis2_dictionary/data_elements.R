@@ -143,7 +143,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
       showModal(modalDialog("Downloading list of datasets", footer=NULL))
 
       url<-paste0( baseurl() , "api/dataSets.json?fields=:all&paging=false")
-      cols = c( 'id', 'name' , 'periodType' , 'dataSetElements' )
+      cols = c( 'id', 'name' , 'periodType' , 'dataSetElements', 'timelyDays' )
       
       dataSets =  get( url )[[1]] %>% select( !!cols ) %>%
         rename( dataSet.id = id, dataSet = name ) 
@@ -434,19 +434,17 @@ data_elements <- function( input, output, session , login_baseurl ) {
   
  
 # output tables ####  
-  output$dataDictionary = renderDT(
 
+  output$dataDictionary = DT::renderDataTable(
+    
     dataDictionary()   , 
     
     rownames = FALSE, 
     filter = 'top' ,
     extensions = 'Buttons' , 
-    
-    options = list( autoWidth = TRUE , 
-                    scrollX = TRUE  ,
-                    dom = 'Bfrtip',
-                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
-    ) 
+
+    options = DToptions_with_buttons( file_name = paste( 'dataElements' , "_" , Sys.Date() ) )
+                                      )
   )
   
   output$indicators = renderDT(
@@ -456,12 +454,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
     rownames = FALSE, 
     filter = 'top' ,
     extensions = 'Buttons' , 
-    
-    options = list( autoWidth = TRUE , 
-                    scrollX = TRUE  ,
-                    dom = 'Bfrtip',
-                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
-    ) 
+    options = DToptions_with_buttons( file_name = paste( 'indicators' , "_" , Sys.Date() ) )
   )
   
   output$dataSets = renderDT(
@@ -471,12 +464,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
     rownames = FALSE, 
     filter = 'top' ,
     extensions = 'Buttons' , 
-    
-    options = list( autoWidth = TRUE , 
-                    scrollX = TRUE  ,
-                    dom = 'Bfrtip',
-                    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
-    ) 
+
+    options = DToptions_with_buttons( paste( 'datasets' , "_" , Sys.Date() ))  
   )
   
 # return ####
