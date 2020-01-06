@@ -2,29 +2,7 @@
 
 # takes as input, output of data_elements.R module, and login then filters for malaria key words
 
-malaria_search_words =  as.character( expression( malaria , paludisme, Pf, plasmodium , falciparum, vivax, RDT, TDR, rapid, slide, goutte ) ) %>% paste( collapse = ', ')
-malaria_search_strings =  as.character( expression( palu, Pf, plasmodi , micro , rapid) ) %>% paste( collapse = ', ')
-
-anc_iptp_search_words =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')
-anc_iptp_search_strings =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')
-
-attendance_search_words =  as.character( expression( attendance , patient, consultation , fever, fievre ) ) %>% paste( collapse = ', ')
-attendance_search_strings =  as.character( expression( attend , consult ) ) %>% paste( collapse = ', ')
-
-chw_search_words =  as.character( expression( imci, iccm, commun, CHW, chd, hsa,  village, VHW ) ) %>% paste( collapse = ', ')
-chw_search_strings =  as.character( expression(  ) ) %>% paste( collapse = ', ')
-
-stock_search_words =  as.character( expression( RDT, TDR,  ACT, ASAQ, AL, APT, SP, fansidar , itn, llin, milda, net ) ) %>% paste( collapse = ', ')
-stock_search_strings =  as.character( expression( artem , lufen , pyr  ) ) %>% paste( collapse = ', ')
-
-death_search_words =  "" # as.character( expression( mortality, death, d?c?s ) ) %>% paste( collapse = ', ')
-death_search_strings =  "" # as.character( expression( mort, death, d?c? ) ) %>% paste( collapse = ', ')
-
-population_search_words =  as.character( expression(  population  ) ) %>% paste( collapse = ', ')
-population_search_strings =  as.character( expression(  pop ) ) %>% paste( collapse = ', ')
-
-not_malaria_search_words = as.character( expression( bcg, ART, yellow, polio, rabies, rage, mening, LAL, plague, measles, bite, paralysis , cholera , trauma ) ) %>% paste( collapse = ', ')
-not_malaria_search_strings = as.character( expression( TB, HIV , VIH, AIDS, SIDA, PMTCT, tuberc, malnut, typh, hemorr, lass, tetan, mening, diarr, cesar, urolo , amoxi , dentist, Bilharz, intestin) ) %>% paste( collapse = ', ')
+source( 'searches.R' )
 
 # Module UI function  ####
 malaria_data_elements_UI <- function( id ) {
@@ -455,7 +433,8 @@ malaria_data_elements <- function( input, output, session , data_elements ,
   # return ####
   return(  
     list( malariaDataElements = malariaDataElements , 
-          malariaDataSets = malariaDataSets )  
+          malariaDataSets = malariaDataSets ,
+          malariaIndicators = malariaIndicators )  
   ) # return reactive expression with data dictionary
   
   

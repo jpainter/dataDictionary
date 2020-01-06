@@ -50,6 +50,8 @@ login_info_UI <- function( id ) {
                            
                            passwordInput( ns("password") , label = "Password:", NULL ), # "district"
                            
+                           actionButton( ns("loginButton"), "Login" ) ,
+                           
                            checkboxInput( ns("demo") , label = "Click to choose from one of the DHIS2 demo instances", FALSE ) ,
                            
                            useShinyjs() ,  # Set up shinyjs
@@ -138,7 +140,7 @@ login_info <- function( input, output, session,
    
    if ( input$demo ){
      
-     print( 'demo:' )
+     # print( 'demo:' )
 
      iFile = "Instances.xlsx"
            
@@ -148,14 +150,14 @@ login_info <- function( input, output, session,
       
      }
      
-     print( paste( "iFile is" , iFile ) )
+     # print( paste( "iFile is" , iFile ) )
 
      i = read_excel( iFile )
      return( i )
    } else ( NULL )
  })
   
- # Update instance selection list
+ # Update instance choices
    observe({
     req( instances() )
      
@@ -167,12 +169,14 @@ login_info <- function( input, output, session,
    observe({
      req( input$instance )
      
+      login( FALSE ) # After change, no login until lgin  button pushed
+      
       i_row = which( instances()$Instance %in% input$instance )
       
       if ( i_row > 0 ){
           
           ins = instances()[ i_row ,]
-          print( ins )
+          # print( ins )
               
           updateTextInput( session, "baseurl" , value = ins$IPaddress )
           updateTextInput( session, "username" , value = ins$UserName )
@@ -182,6 +186,7 @@ login_info <- function( input, output, session,
    
    # Instance--selection ####
    instance = reactive({
+     
         if ( !is.null( input$instancesFile  ) ){
        
           i_row = which( instances()$Instance %in% input$instance )
@@ -192,6 +197,7 @@ login_info <- function( input, output, session,
           
           Instance = str_split( baseurl() , "://")[[1]][2]
         }
+     
      return( Instance )
    })
 
@@ -204,19 +210,34 @@ login_info <- function( input, output, session,
     
   })
   
-  login = reactive({ 
-    
-    req( baseurl() )
-    baseurl = baseurl()
-    
-    if ( is_empty( baseurl() ) | is_empty( input$username ) | is_empty( input$password ) ) return( FALSE )
-    
-    login = try( loginDHIS2( baseurl , input$username, input$password) )
-    if ( class( login ) == "logical" ) return( login ) 
-    return( NULL )
+  login = reactiveVal( FALSE )
+
+  observeEvent( input$loginButton , { 
+
+    if ( is_empty( baseurl() ) | is_empty( input$username ) | is_empty( input$password ) ){
+
+      login( FALSE )
+      return( login() )
+    }
+
+    l = try( loginDHIS2( baseurl() , input$username, input$password) )
+
+    if ( class( l ) == "logical" ) {
+
+      login( TRUE )
+      return( login() )
+
+    } else {
+
+      login( FALSE )
+      return( login()  )
+
+    }
+
   })
   
   system.info = reactive({
+    
     req( login() )
     if ( login() ){
       # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
@@ -322,16 +343,7 @@ login_info <- function( input, output, session,
     
   })
   
-  # download info
-  # output$downloadInfo <- downloadHandler(
-  #   filename = function() {
-  #     return( paste( instance() , '_info.csv', sep=''))
-  #   },
-  #   content = function( file ) {
-  #     write.csv( system.info()  ,  file )
-  #   }
-  # )
-  
+
   # Download all meta data ####
   output$downloadInfo <- downloadHandler(
 
