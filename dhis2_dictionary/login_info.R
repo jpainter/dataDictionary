@@ -354,7 +354,8 @@ login_info <- function( input, output, session,
       writeDataTable( wb, sheet1, system.info() , rowNames = FALSE )
       writeDataTable(  wb, sheet2, meta_variables() , rowNames = FALSE )
       writeDataTable( wb, sheet3,  orgUnits$orgUnitLevels()  )
-      writeDataTable( wb, sheet4, orgUnits$orgUnits()[5:10,]
+      writeDataTable( wb, sheet4, orgUnits$orgUnits() %>%
+                        mutate( parent = "" )
                         , rowNames = FALSE )
       writeDataTable( wb, sheet5, data_elements$dataDictionary() , rowNames = FALSE )
       writeDataTable( wb, sheet6, data_elements$dataSets() , rowNames = FALSE )
