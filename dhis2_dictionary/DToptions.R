@@ -1,7 +1,7 @@
 
 
 # DT table options... ####
-buttonList = function( file_name = paste( 'downloaded' , Sys.Date() ) ){
+buttonList = function( file_name = paste( 'downloaded_' , Sys.Date() ) ){
   list( 'copy', 'print', 
         list(
           extend = 'collection', 
@@ -18,10 +18,9 @@ buttonList = function( file_name = paste( 'downloaded' , Sys.Date() ) ){
 DToptions_with_buttons = function(...){
   list( autoWidth = TRUE , 
         scrollX = TRUE  ,
-        # lengthMenu = c(10, 25, -1) ,
-        lengthMenu = list(c(10, 25, -1), list('10', '25', 'All') ) ,
+        lengthMenu = list( c( -1, 5, 10, 25, -1), list( 'All' , '5' , '10', '25') ) ,
         columnDefs = list( list( className = 'dt-right' , targets="_all" ) ) ,
-        dom = 'Blfrtip' ,
+        dom = 'l<"col-sm-6"B>fiprt' ,
         buttons = buttonList(...)
   )
 }
@@ -29,8 +28,9 @@ DToptions_with_buttons = function(...){
 
 DToptions_no_buttons = function(...){
   list( autoWidth = TRUE , 
+        dom = 'l<"col-sm-6"i>fprt' ,
         # scrollX = TRUE  ,
-        lengthMenu = list(c(10, 25, -1), list('10', '25', 'All') ) ,
-        columnDefs = list(list(className = 'dt-right', targets="_all" ) ) 
+        lengthMenu = list( c( -1, 5, 10, 25, -1), list( 'All' , '5' , '10', '25') ) ,
+        columnDefs = list( list(className = 'dt-right', targets="_all" ) ) 
   )
 }

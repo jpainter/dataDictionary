@@ -30,7 +30,6 @@ orgUnits_UI <- function( id ) {
                 
                  tabPanel("Organizational Unit Levels", 
                           
-
                           DTOutput( ns( 'orgUnit_levels' )  ) ,
                           
                           style = "overflow-x: scroll;"
@@ -38,9 +37,7 @@ orgUnits_UI <- function( id ) {
                  ) ,
                  
                 tabPanel("Organizational Units", 
-
-                         textOutput( ns('n_ou') ),
-
+                         
                          DTOutput( ns( 'orgUnit_table' )  ) ,
                          
                          style = "overflow-x: scroll;"
@@ -52,8 +49,6 @@ orgUnits_UI <- function( id ) {
                         column( 6, DTOutput( ns( 'geoFeatures' ) ) ) ,
                          
                         column( 6, leafletOutput( ns("geoFeatures_map") ) )
-                         
-                        
                          
                 ) 
     )
@@ -70,6 +65,7 @@ org_units <- function( input, output, session , login_baseurl) {
   
   login = reactive({ login_baseurl$login() })
   baseurl = reactive({ login_baseurl$baseurl() })
+  instance = reactive({ login_baseurl$instance() })
  
 
   orgUnits = reactive({
@@ -105,7 +101,7 @@ org_units <- function( input, output, session , login_baseurl) {
 
   })
   
-
+  
   orgUnitLevels = reactive({
     
     if (  login() ){
@@ -138,7 +134,7 @@ org_units <- function( input, output, session , login_baseurl) {
     })
   
   
-  output$n_ou = renderText( n_orgUnits() )
+  # output$n_ou = renderText( n_orgUnits() )
   
   # download geo features ####
   ## for description of properties, see table 1.59, 
@@ -183,11 +179,15 @@ org_units <- function( input, output, session , login_baseurl) {
     geoFeatures(), 
     
     rownames = FALSE, 
-    filter = 'top' ,
     extensions = 'Buttons' , 
     options = list( 
           # autoWidth = TRUE , 
           scrollX = TRUE  ,
+          extensions = 'Buttons' , 
+          options = 
+            DToptions_with_buttons( file_name = paste( instance() , '_GeoFeatures_' , Sys.Date() ) 
+                                    ) ,
+
           columnDefs = list( list( className = 'dt-right', 
                                    targets = "_all"  ,
                                    render = JS(
@@ -199,16 +199,100 @@ org_units <- function( input, output, session , login_baseurl) {
     callback = JS('table.page(3).draw(false);')
     )
 
+  # polygons ####
   
-  # geoFeatures MAP
+  ous_geoFeatures = reactive({
+    
+    # ogf = ous_from_geoFeatures( geoFeatures = geoFeatures(),
+    #                                        orgUnits = orgUnits() , 
+    #                                        open.only = FALSE , # limit to clinics currently open, only,
+    #                                        fix = TRUE ,
+    #                                        SF = TRUE ,
+    #                                        simplify = TRUE ,
+    #                                        simplify.keep = .015 , # larger numbers yield less detail
+    #                                         )
+    # return( ogf )
+  })
+  
+  # geoFeatures MAP ####
   output$geoFeatures_map = renderLeaflet({
-    polygons =  geoFeatures() %>% filter( ty %in% 2 )
-    points =  geoFeatures() %>% filter( ty %in% 1 )
-    # tm <- tm_shape()  
+    
+    # polygons =  ous_geoFeatures() %>% filter( ty %in% 2 )
+    # 
+    # # points =  geoFeatures() %>% filter( ty %in% 1 )
+    # 
+    # tm <- tm_shape()
+    # 
     #   + tm_polygons( 'polygons', legend.title = "Administrative Areas")
+    # 
     # tmap_leaflet(tm)
   })
 
+  # geoFetures Map ####
+  
+  # Regions 
+  # md = geoFeatures() %>% filter( level == 2 )
+  
+  # map.district = ous_from_metatdata( .meta = md , simplify = FALSE , SF = TRUE ) 
+  
+  
+  # output$geoFeatures_map = leaflet(width=900, height=650) %>%
+  #   
+  #   # base map
+  #   # addProviderTiles("Hydda.Base") %>%
+  #   
+  #   addTiles(  urlTemplate =
+  #                "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+  #   )  %>%
+  #   
+  #   addPolygons( data = map.region ,
+  #                group = 'Region' ,
+  #                color = "black",
+  #                weight = 1 ,
+  #                opacity = 1 ,
+  #                # label = ~paste( scales::percent(dec) ),
+  #                # labelOptions = labelOptions(noHide = TRUE, textOnly = TRUE, textsize = "14px") ,
+  #                popup = ~paste( orgUnit.name , percent( dec ) )  ,
+  #                fillColor =  ~binpal(dec),
+  #                fillOpacity = .5
+  #   ) %>%
+  #   addPolygons( data = map.district ,
+  #                group = 'District' , 
+  #                color = "black", 
+  #                weight = 1 , 
+  #                opacity = 1 ,
+  #                # label = ~paste( scales::percent(dec) ),
+  #                # labelOptions = labelOptions(noHide = TRUE, textOnly = TRUE, textsize = "14px") ,
+  #                popup = ~paste( orgUnit.name  , percent( dec ) )  ,
+  #                fillColor =  ~binpal(dec),
+  #                fillOpacity = .5
+  #   ) 
+  
+  # addCircleMarkers( data =  x.facilities , 
+  #                   ~long , ~lat , 
+  #                   radius = ~total/ radius_factor  , 
+  #                   fillColor = ~factpal( quality ) ,
+  #                   fillOpacity = 1 , 
+  #                   weight = 1 ,
+  #                   group = 'Facilities' ,
+  #                   color = 'black' ,
+  #                   opacity = .5 ,
+  #                   popup = ~paste( orgUnit.name, "total:" , comma(total) ,
+  #                                   "quality:" , percent( dec ) ) 
+  # ) %>%
+  # 
+  # addLabelOnlyMarkers(data = centers.district,
+  #                     # group = 'District' ,
+  #                     lng = ~x, lat = ~y, label = ~dec,
+  #                     labelOptions = labelOptions(noHide = F, textOnly = TRUE, textsize = "15px" )
+  #                     
+  # ) %>% 
+  # 
+  # addLegend(position = "bottomright", pal = binpal, 
+  #           values = map.district$dec,
+  #           title = "Quality",
+  #           opacity = 1 )
+  
 
 # output tables ####  
 
@@ -221,9 +305,7 @@ org_units <- function( input, output, session , login_baseurl) {
     extensions = 'Buttons' , 
     
     options = 
-      list(
-      DToptions_with_buttons( file_name = paste( 'OrgUnitLevels' , "_" , Sys.Date() ) )
-      )
+      DToptions_with_buttons( file_name = paste( instance() , '_OrgUnitLevels_' , "_" , Sys.Date() ) )
   )
   
   output$orgUnit_table = renderDT(
@@ -231,18 +313,18 @@ org_units <- function( input, output, session , login_baseurl) {
     orgUnits()   , 
     
     rownames = FALSE, 
-    filter = 'top' ,
     extensions = 'Buttons' , 
-    options = list( 
-      DToptions_with_buttons( file_name = paste( 'orgUnits' , "_" , Sys.Date() ) )
-    )
+    options = 
+      DToptions_with_buttons( file_name = paste( instance() , '_OrgUnits_' , Sys.Date() ) )
 
     )
+  
+# ous.translated ####
+  
 
-  
-  
 # return ####
-  return(  list( orgUnitLevels = orgUnitLevels , orgUnits = orgUnits  )  
-           ) # return reactive expression with data dictionary
+  return(  list( orgUnitLevels = orgUnitLevels_with_counts , 
+                 orgUnits = orgUnits  )  
+           ) # return reactive expression 
     
 }

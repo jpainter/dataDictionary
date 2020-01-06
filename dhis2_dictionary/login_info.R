@@ -1,6 +1,7 @@
 # login_info_module
 
 # Helper functions
+
 # Login ####
 loginDHIS2<-function( baseurl, username, password) {
   
@@ -30,7 +31,7 @@ get = function( source_url , .print = TRUE , ...){
   
 }
 
-# Module UI function  ####
+# User Interface ####
 login_info_UI <- function( id ) {
   # Create a namespace function using the provided id
   ns <- NS(id)
@@ -49,18 +50,30 @@ login_info_UI <- function( id ) {
                            
                            passwordInput( ns("password") , label = "Password:", NULL ), # "district"
                            
-                           checkboxInput( ns("demo") , label = "Click to use one of the DHIS2 demo instances at https://play.dhis2.org", FALSE )
+                           checkboxInput( ns("demo") , label = "Click to choose from one of the DHIS2 demo instances", FALSE ) ,
+                           
+                           useShinyjs() ,  # Set up shinyjs
+                           selectInput( ns('instance') , "Instance" , choices = NULL ) , 
+                                    
+                           fileInput( ns('instancesFile'), 'Optional list of credentials (.xlsx)', 
+                                       accept = c(".xlsx", "xls") 
+                                       )
                          ) , 
                          
                          br() , br() ,
 
                          textOutput( ns('connection') ) ,
                          
-                         br() , br() ,
+                         br() , 
                          
-                         tableOutput( ns('systemInfo') ) ,
+                         downloadButton( ns( 'downloadInfo' ), 'Download system info') ,
                          
-                         downloadButton( ns( 'downloadInfo' ), 'Download system info')
+                         br() ,
+                         
+                         fluidRow(
+                           column( 6, tableOutput( ns('systemInfo') ) ) , 
+                           column( 6 , DTOutput( ns('variables') ) )
+                           )
                          
                          ) ,
                 
@@ -84,19 +97,104 @@ login_info_UI <- function( id ) {
 }
 
 # Server function ####
-login_info <- function( input, output, session ) {
+login_info <- function( input, output, session, 
+                        orgUnits ,
+                        data_elements , 
+                        malariaDataElements ) {
   
+  # hide instance choice list unless demo checked
+  shinyjs::hideElement( id = "instance" )
+  shinyjs::hideElement( id = "instancesFile" )
   
   observe({
-    req( input$demo )
-    if ( input$demo ){
-      
-      updateTextInput( session, "baseurl" , value = "https://play.dhis2.org/2.32/" )
-      updateTextInput( session, "username" , value = "admin" )
-      updateTextInput( session, "password" , value = "district" )
-    }
+      req( input$demo )
+      if ( input$demo ){
+        
+        print( 'demo' )
+        shinyjs::showElement("instance")
+        shinyjs::showElement( "instancesFile" )
+        
+      } else {
+          
+        print( 'n0 demo' )
+        shinyjs::hideElement("instance")
+        shinyjs::hideElement( "instancesFile" )
+        
+        }
   })
   
+  # uploaded instances ####
+  instance_file <- reactive({
+    
+    req( input$instancesFile )
+    
+    inFile <- input$instancesFile
+
+    inFile$datapath
+  })
+  
+ # Instances tibble
+ instances = reactive({
+   
+   if ( input$demo ){
+     
+     print( 'demo:' )
+
+     iFile = "Instances.xlsx"
+           
+     if ( !is.null( input$instancesFile  ) ){
+       
+      iFile = instance_file()
+      
+     }
+     
+     print( paste( "iFile is" , iFile ) )
+
+     i = read_excel( iFile )
+     return( i )
+   } else ( NULL )
+ })
+  
+ # Update instance selection list
+   observe({
+    req( instances() )
+     
+    updateSelectInput( session, "instance" , choices = instances()$Instance )
+      
+  })
+   
+   # update credentials after selecting instance
+   observe({
+     req( input$instance )
+     
+      i_row = which( instances()$Instance %in% input$instance )
+      
+      if ( i_row > 0 ){
+          
+          ins = instances()[ i_row ,]
+          print( ins )
+              
+          updateTextInput( session, "baseurl" , value = ins$IPaddress )
+          updateTextInput( session, "username" , value = ins$UserName )
+          updateTextInput( session, "password" , value = ins$Password )
+      }
+   })
+   
+   # Instance--selection ####
+   instance = reactive({
+        if ( !is.null( input$instancesFile  ) ){
+       
+          i_row = which( instances()$Instance %in% input$instance )
+          
+          Instance = instances()$Instance[ i_row ]
+          
+        } else {
+          
+          Instance = str_split( baseurl() , "://")[[1]][2]
+        }
+     return( Instance )
+   })
+
   baseurl = reactive({
     # if url is from login or dashboard url, trimto get baseurl
     # possible.suffixes:
@@ -145,15 +243,6 @@ login_info <- function( input, output, session ) {
           
         ) %>% 
         gather( Attribute, Value ) 
-
-      
-      #   as_tibble() %>%
-      #   filter( row_number() == 1 ) %>%
-      #   select( version, buildTime  ,
-      #           lastAnalyticsTableSuccess ,
-      #           intervalSinceLastAnalyticsTableSuccess ,
-      #           lastAnalyticsTableRuntime ,
-      #           calendar, dateFormat )
       
     } else { 
       
@@ -224,16 +313,86 @@ login_info <- function( input, output, session ) {
     
   )
   
+  # instance
+  instance = reactive({
+    
+    ifelse( !is.null( input$instance ), 
+                         input$instance ,
+                         baseurl() )
+    
+  })
+  
+  # download info
+  # output$downloadInfo <- downloadHandler(
+  #   filename = function() {
+  #     return( paste( instance() , '_info.csv', sep=''))
+  #   },
+  #   content = function( file ) {
+  #     write.csv( system.info()  ,  file )
+  #   }
+  # )
+  
+  # Download all meta data ####
   output$downloadInfo <- downloadHandler(
-    filename = function() { 
-      return( paste('info_', baseurl() , '_.csv', sep=''))
-    }, 
-    content = function(file) {
-      write.csv( system.info()  ,  file )
-    }
-  )
 
-  return( list( login = login , baseurl = baseurl  ) )
+    filename = function() {
+      paste0( instance() , "_metaData_", Sys.Date()  ,".xlsx"  )
+    } ,
+    
+    content = function( file ) {
+
+      wb <- openxlsx::createWorkbook()
+
+      sheet1  <- addWorksheet( wb, sheetName = "System")
+      sheet2  <- addWorksheet( wb, sheetName = "MetadataSizes")
+      sheet3  <- addWorksheet( wb, sheetName = "OrgUnitLevels")
+      sheet4  <- addWorksheet( wb, sheetName = "OrgUnits")
+      sheet5  <- addWorksheet( wb, sheetName = "DataElements")
+      sheet6  <- addWorksheet( wb, sheetName = "DataSets")
+      sheet7  <- addWorksheet( wb, sheetName = "Indicators")
+
+      writeDataTable( wb, sheet1, system.info() , rowNames = FALSE )
+      writeDataTable(  wb, sheet2, meta_variables() , rowNames = FALSE )
+      writeDataTable( wb, sheet3,  orgUnits$orgUnitLevels()  )
+      writeDataTable( wb, sheet4, orgUnits$orgUnits()[5:10,]
+                        , rowNames = FALSE )
+      writeDataTable( wb, sheet5, data_elements$dataDictionary() , rowNames = FALSE )
+      writeDataTable( wb, sheet6, data_elements$dataSets() , rowNames = FALSE )
+      writeDataTable( wb, sheet7, data_elements$indicators() , rowNames = FALSE )
+
+      openxlsx::saveWorkbook( wb , file , overwrite = TRUE )
+     }
+  )
+  
+  # Variables ####
+  
+  meta_variables = reactive({
+    data_frame( 
+    'Organizational units' = nrow( orgUnits$orgUnits() ) %>% scales::comma() ,
+    'Data elements' = nrow( data_elements$dataDictionary() ) %>% scales::comma() ,
+    'Data sets' = nrow( data_elements$dataSets() ) %>% scales::comma() ,
+    'Indicators' = nrow( data_elements$indicators() ) %>% scales::comma()
+    ) %>% gather( 'Variable', 'Number' )
+    
+  })
+  
+  output$variables = DT::renderDT(
+
+    meta_variables() ,
+    extensions = 'Buttons' ,
+    rownames = FALSE,
+    options = list( autoWidth = TRUE , 
+        scrollX = TRUE  ,
+        lengthMenu = list( c( -1, 5, 10, 25, -1), list( 'All' , '5' , '10', '25') ) ,
+        columnDefs = list( list( className = 'dt-right' , targets="_all" ) ) ,
+        dom = 'tB' ,
+        buttons = buttonList( 
+          file_name = paste( instance() , '_variables_' , Sys.Date() ) )
+        )
+  )
+  
+
+  return( list( login = login , baseurl = baseurl , instance = instance  ) )
     
 }
 

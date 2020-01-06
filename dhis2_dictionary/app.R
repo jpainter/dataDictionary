@@ -28,6 +28,7 @@
 # )
 
 library( shiny )
+library( shinyjs )
 library( shinydashboard )
 library( shinyBS )
 library( shinyLP )
@@ -42,6 +43,8 @@ library( knitr )
 library( rlang )
 library( stringi )
 library( tidyselect )
+library(geojsonsf)
+library( geojsonio ) # must load before jsonlite - validate function conflict
 library( jsonlite )
 library( httr )
 library( curl )
@@ -53,6 +56,11 @@ library( DT )
 library( textutils )
 library( readxl )
 library( openxlsx  )
+library( anytime )
+library( lubridate )
+library( sf )
+
+library( rmapshaper )
 
 
 # load modules ####
@@ -63,6 +71,7 @@ source( 'data_elements.R' )
 source( 'malaria_data_elements.R' )
 source( 'malaria_data_formulas.R' )
 source( 'DToptions.R')
+source( 'ous_from_geoFeatures.R' )
 
 # setup ####
 
@@ -218,7 +227,11 @@ server <-  function(input, output, session){
   
   # Load modules ####
   
-   login_baseurl = callModule( login_info , "login" )
+   login_baseurl = callModule( login_info , "login" , 
+                               orgUnits = orgUnits ,
+                               data_elements = data_dictionary , 
+                               malariaDataElements = malaria_data_elements
+                               )
    
    orgUnits = callModule( org_units , "ou" , login_baseurl = login_baseurl )
 

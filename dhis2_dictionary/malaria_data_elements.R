@@ -36,10 +36,6 @@ malaria_data_elements_UI <- function( id ) {
     tabsetPanel(type = "tabs",
  
                 tabPanel( "Malaria-relevant Data Elements" ,
-
-                          textOutput( ns('number_dataElements') ) ,
-                          
-                          # downloadButton( ns( 'download_malaria_dataElements' ) , 'Download data elements') ,
                           
                           DTOutput( ns('malariaDataElements') )
     
@@ -47,19 +43,11 @@ malaria_data_elements_UI <- function( id ) {
                 
                 tabPanel( "Malaria-relevant Indicators" ,
                           
-                          textOutput( ns('number_indicators') ) ,
-                          
-                          # downloadButton( ns( 'download_malaria_indicators' ) , 'Download indicators') ,
-                          
                           DTOutput( ns('malariaIndicators') )
                           
                 ) ,
                 
                 tabPanel("Malaria-relevant Datasets",
-                         
-                         # downloadButton( ns( 'download_malaria_datasets' ), 'Download dataSets') ,
-                         
-                         textOutput( ns('n_ds') ) ,
                          
                          DTOutput( ns('malariaDataSets') ) ,
                          
@@ -137,6 +125,7 @@ malaria_data_elements <- function( input, output, session , data_elements ,
 
   login = reactive({ login_baseurl$login() })
   baseurl = reactive({ login_baseurl$baseurl() })
+  instance = reactive({ login_baseurl$instance() })
   
   # data elements
   de = reactive({ data_elements$dataDictionary() })
@@ -260,20 +249,16 @@ malaria_data_elements <- function( input, output, session , data_elements ,
       select( -value ) %>%
       group_by_at( vars(-Search) ) %>%
       summarise( Search = paste( Search , collapse = "; " , sep = "; ") ) %>%
-      ungroup
+      ungroup %>%
+      select( Search , everything() ) %>%
+      rename( `Search Term` = Search )
       
     
     return(  mde  )
 
   })
   
-  dataElement.rows = reactive({ 
-    
-    req( malariaDataElements() )
-    mdd.rows = nrow( malariaDataElements())
-    paste( 'There are', mdd.rows , '(most likely) malaria relevant data elements' ) 
-  })
-  
+ 
   # indicators
   ind = reactive({ data_elements$indicators() })
   
@@ -306,15 +291,7 @@ malaria_data_elements <- function( input, output, session , data_elements ,
     
   })
   
-  indicator.rows = reactive({ 
-    
-    req( ind() )
-    ind.rows = nrow( malariaIndicators() )
-    paste( 'There are', ind.rows , 
-           'indicators derived from one or more of the malaria-relevant data elements' ) 
-  })
 
-  
   malariaDataSets = reactive({
     
     req( malariaDataElements() )
@@ -335,13 +312,6 @@ malaria_data_elements <- function( input, output, session , data_elements ,
     
     return(  mds )
     
-  })
-  
-  dataset.rows = reactive({ 
-    
-    req( malariaDataSets() )
-    ds.rows = nrow( malariaDataSets() )
-    paste( 'There are', ds.rows , '(most likely) malaria relevant data sets' ) 
   })
   
   
@@ -444,22 +414,6 @@ malaria_data_elements <- function( input, output, session , data_elements ,
   }
   
   # Outputs ####
-  
-  # print number of malaria relevent data elements
-  indicator.rows = reactive({ 
-    
-    req( malariaIndicators() )
-    mdd.rows = nrow( malariaIndicators())
-    paste( 'There are', mdd.rows , '(most likely) malaria relevant data elements' ) 
-  })
-  
-  
-  output$number_dataElements  = renderText( dataElement.rows() )
-
-  output$number_indicators  = renderText( indicator.rows() )
-  
-  output$n_ds  = renderText( dataset.rows() )
-  
 
   output$malariaDataElements = DT::renderDataTable( 
     
@@ -468,7 +422,9 @@ malaria_data_elements <- function( input, output, session , data_elements ,
     rownames = FALSE, 
     filter = 'top' ,
     extensions = 'Buttons' , 
-    options = DToptions_with_buttons(paste( 'Malaria_dataElements' , "_" , Sys.Date() ))  
+    options = DToptions_with_buttons(
+      paste( instance() , 'Malaria_dataElements_' , Sys.Date() )
+      )  
   )
   
   
@@ -479,7 +435,9 @@ malaria_data_elements <- function( input, output, session , data_elements ,
     rownames = FALSE, 
     filter = 'top' ,
     extensions = 'Buttons' , 
-    options = DToptions_with_buttons(paste( 'Malaria_indicators' , "_" , Sys.Date() ))  
+    options = DToptions_with_buttons(
+      paste( instance() , 'Malaria_indicators_' , Sys.Date() )
+      )  
   )
   
   output$malariaDataSets = renderDT( 
@@ -489,7 +447,9 @@ malaria_data_elements <- function( input, output, session , data_elements ,
     rownames = FALSE, 
     filter = 'top' ,
     extensions = 'Buttons' , 
-    options = DToptions_with_buttons(paste( 'Malaria_datasets' , "_" , Sys.Date() ))  
+    options = DToptions_with_buttons( 
+      paste( instance() , '_Malaria_datasets_'  , Sys.Date() )
+      )  
   )
   
   # return ####

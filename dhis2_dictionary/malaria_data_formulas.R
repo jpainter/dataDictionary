@@ -143,6 +143,7 @@ malaria_data_formulas <- function( input, output, session ,
   
   login = reactive({ login_baseurl$login() })
   baseurl = reactive({ login_baseurl$baseurl() })
+  instance = reactive({ login_baseurl$instance() })
   
   # malaria data elements
   mde = reactive({ malariaDataElements$malariaDataElements() }) 
@@ -351,7 +352,7 @@ malaria_data_formulas <- function( input, output, session ,
     rownames = FALSE , 
     server = TRUE, escape = FALSE, 
     selection = list( mode='single' ) ,
-    options = DToptions_no_buttons
+    options = DToptions_no_buttons()
     )
   
   
@@ -476,7 +477,7 @@ malaria_data_formulas <- function( input, output, session ,
     filter = 'top' ,
     server = TRUE, escape = FALSE, 
     selection = list( mode='single' )   ,
-    options = DToptions_no_buttons
+    options = DToptions_no_buttons()
     )
   
   # empty table if formula elements change
@@ -500,8 +501,11 @@ malaria_data_formulas <- function( input, output, session ,
   
   # Download formula data ####
   output$downloadFormulaData <- downloadHandler(
-    
-    filename = paste0( input$formulaName , Sys.Date()  ,".xlsx"  ) ,
+  
+      
+    filename = function() { 
+      paste0( instance() , "_" , input$formulaName , "_" , Sys.Date()  ,".xlsx"  )
+      } ,
 
     content = function( file ) {
       
@@ -528,7 +532,9 @@ malaria_data_formulas <- function( input, output, session ,
   
   output$downloadFormulas <- downloadHandler(
     
-    filename = paste0( "Formulas" , Sys.Date()  ,".xlsx" ) ,
+    filename = function() { 
+      paste0( instance() , "_Formulas_" , Sys.Date()  ,".xlsx" ) 
+      },
     
     content = function( file ) {
       
