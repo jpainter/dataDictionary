@@ -215,11 +215,11 @@ malaria_data_elements <- function( input, output, session , data_elements ,
       mutate( 
         malaria = malaria ,
         attendance = attendance ,
-              anc_iptp = anc_iptp ,
-              chw = chw ,
-              death =death ,
-              stock = stock ,
-              population = population 
+        anc_iptp = anc_iptp ,
+        chw = chw ,
+        death =death ,
+        stock = stock ,
+        population = population 
               ) %>%
       filter( likely.de) %>% 
       gather( "Search" , "value" , malaria , attendance , anc_iptp , chw , death , stock , population ) %>%

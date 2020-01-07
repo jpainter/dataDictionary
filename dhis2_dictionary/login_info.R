@@ -50,7 +50,7 @@ login_info_UI <- function( id ) {
                            
                            passwordInput( ns("password") , label = "Password:", NULL ), # "district"
                            
-                           actionButton( ns("loginButton"), "Login" ) ,
+                           actionButton( ns("loginButton"), "Login" , style='margin-top:25px' ) ,
                            
                            checkboxInput( ns("demo") , label = "Click to choose from one of the DHIS2 demo instances", FALSE ) ,
                            

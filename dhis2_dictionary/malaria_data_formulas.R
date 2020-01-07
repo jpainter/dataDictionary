@@ -49,9 +49,8 @@ malaria_data_formulas_UI <- function( id ) {
                                 ) ,
                                 
                              column( 6 ,
-                                     
-                                     tags$br() ,
-                                     downloadButton( ns('downloadFormulas') , 'Download Formula Definitions') 
+
+                                     downloadButton( ns('downloadFormulas') , 'Download Formula Definitions' , style='margin-top:25px') 
                             
                                   ) 
                                 ) ,
@@ -254,6 +253,7 @@ malaria_data_formulas <- function( input, output, session ,
     selection = list( mode='single' ) ,
     options = DToptions_no_buttons() 
   ) 
+
   
   # Add element to formula when clicked ####
   observeEvent( input$malariaDataElements_rows_selected , {
@@ -299,10 +299,13 @@ malaria_data_formulas <- function( input, output, session ,
     
     ft = input$formulaText
     
+    print( paste('formuals characters = ', nchar(ft)))
+    
     if ( nchar( ft ) == 0 ) return( mde() %>% filter( FALSE ) )
     
-    # Parse elements separated by mathematical operator
-    formulaElements = strsplit( ft , " [-+*\\/] " ) %>% unlist %>% str_trim 
+    # Parse elements separated by mathematical operator between ] and [
+    # example:  "[a].[b - c] + [a].[e - f]" -> "[a].[b - c]"  ,  "[a].[e - f]"
+    formulaElements = strsplit( ft , "\\] [-+*\\/] \\[" ) %>% unlist %>% str_trim 
     
     # Table of elements and categories
     formulaParts = 
@@ -312,12 +315,16 @@ malaria_data_formulas <- function( input, output, session ,
         dataElement = map( formulaElements , ~strsplit( .x , "].[" , fixed = TRUE ) %>% unlist ) %>%
           map( . , 1 ) %>%
           str_replace_all( . , "\\[|\\]" , "" ) %>%
+          str_replace_all( . , fixed("]") , "" ) %>%
+          str_replace_all( . , fixed("[") , "" ) %>%
           str_trim() ,
         
         Categories = 
           map( formulaElements , ~str_split( .x , fixed("].[") ) %>% unlist ) %>%
           map( . , 2 ) %>% 
-          str_replace_all( . , "\\[|\\]" , "" ) %>%
+          # str_replace_all( . , "\\[|\\]" , "" ) %>%
+          str_replace_all( . , fixed("]") , "" ) %>%
+          str_replace_all( . , fixed("[") , "" ) %>%
           str_trim() 
         
       ) %>% select( dataElement , Categories ) %>% unique
@@ -327,17 +334,22 @@ malaria_data_formulas <- function( input, output, session ,
       mutate( Categories = Categories %>% str_trim  ,
               categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )
     
+    print( formulaParts )
+    
     # Filter MDE to formula elements:
     tableOfFormulaElements = 
       bind_rows(
         # elements and categories
-        inner_join( mde, formulaParts %>% filter( !Categories %in% "NULL" ) , 
+        inner_join( mde, 
+                    formulaParts %>% filter( !Categories %in% "NULL" ) , 
                     by = c("dataElement", "Categories" ) ) ,
         # elements only
-        semi_join( mde, formulaParts %>% filter( Categories %in% "NULL"  ) , 
+        semi_join( mde, 
+                   formulaParts %>% filter( Categories %in% "NULL"  ) , 
                    by = "dataElement" ) 
       ) %>%
-      arrange( dataElement , Categories )
+      unique() %>%
+       arrange( dataElement , Categories )
     
     return( tableOfFormulaElements )
     
@@ -579,6 +591,8 @@ malaria_data_formulas <- function( input, output, session ,
     
     req( dd() )
     
+    print( head(dd() ) )
+    
     d = dd() %>%
       select( levelName, orgUnit , orgUnitName, period , dataElement.id , categoryOptionCombo.ids , SUM ) %>%
       mutate(
@@ -589,11 +603,15 @@ malaria_data_formulas <- function( input, output, session ,
       unite( "box" , dataElement.id , categoryOptionCombo.ids, 
              sep = ".", remove = TRUE, na.rm = FALSE 
              ) %>%
-      complete( orgUnit, period , box , fill = list( SUM = 0 ) ) %>%
+      complete( box, period , nesting( levelName, orgUnitName, orgUnit )  , 
+                fill = list( SUM = 0 ) 
+                ) %>%
       pivot_wider(
         names_from = box,
         values_from = SUM )
 
+    # print( '....\n' )
+    # print( head(d) )
     
       formula_dataset = d %>%
         group_by( levelName , orgUnitName, period  ) %>%

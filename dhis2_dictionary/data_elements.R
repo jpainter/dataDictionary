@@ -146,7 +146,23 @@ data_elements <- function( input, output, session , login_baseurl ) {
       cols = c( 'id', 'name' , 'periodType' , 'dataSetElements', 'timelyDays' )
       
       dataSets =  get( url )[[1]] %>% select( !!cols ) %>%
-        rename( dataSet.id = id, dataSet = name ) 
+        rename( dataSet.id = id, 
+                dataSet = name , 
+                # , dataSetElements.id = dataSetElements 
+                )
+      
+      # print( glimpse( dataSets$dataSetElements[[1]] ) ) 
+      
+      # print( map_chr( dataSets[1,]$dataSetElements, 1 ))
+      
+        # %>%
+        # # join with data elements to get names of dataset elements 
+        # left_join( dataElements() %>% select( id, shortName ) %>% 
+        #              rename( dataSetElements.id = id , 
+        #                      dataSetElements = shortName ) , 
+        #            by = 'dataSetElements.id'
+        #            ) %>%
+        # select( - dataSetElements.id )
 
       removeModal()
       
@@ -458,7 +474,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
   
   output$dataSets = renderDT(
     
-    dataSets() %>% select(-dataSetElements ) ,
+    dataSets() , # %>% select(-dataSetElements ) ,
     
     rownames = FALSE, 
     filter = 'top' ,

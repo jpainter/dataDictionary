@@ -23,3 +23,14 @@ population_search_strings =  as.character( expression(  pop ) ) %>% paste( colla
 
 not_malaria_search_words = as.character( expression( bcg, ART, yellow, polio, rabies, rage, mening, LAL, plague, measles, bite, paralysis , cholera , trauma ) ) %>% paste( collapse = ', ')
 not_malaria_search_strings = as.character( expression( TB, HIV , VIH, AIDS, SIDA, PMTCT, tuberc, malnut, typh, hemorr, lass, tetan, mening, diarr, cesar, urolo , amoxi , dentist, Bilharz, intestin) ) %>% paste( collapse = ', ')
+
+
+
+hiv_search_words = as.character( expression( ART, HIV ) ) %>% paste( collapse = ', ') 
+hiv_search_strings = as.character( expression( HIV , VIH, AIDS, SIDA, PMTCT ) ) %>% paste( collapse = ', ')
+
+tb_search_words = as.character( expression( bcg, TB ) ) %>% paste( collapse = ', ')
+tb_search_strings = as.character( expression( TB, tuberc ) ) %>% paste( collapse = ', ')
+
+immunization_search_words = as.character( expression( polio, rabies, mening,  measles ) ) %>% paste( collapse = ', ')
+immunization_search_strings = as.character( expression( vacc , immuni ) ) %>% paste( collapse = ', ')

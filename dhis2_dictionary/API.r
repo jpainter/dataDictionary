@@ -527,14 +527,18 @@ api_last12months_national_data = function(
 }
 
 ### Translate Formula Function  ####
-translate_formula = function( f , elements , translate_from , translate_to , brackets = FALSE ){
+translate_formula = function( f , 
+                              elements , 
+                              translate_from , 
+                              translate_to , 
+                              brackets = FALSE ){
   
   # if ( translate_to %in% 'str' ){ var = "id" }
   
   # formula elements
   elements.cc = elements %>% select( categoryOptionCombo.ids, Categories ) %>% 
     mutate( id = categoryOptionCombo.ids %>% str_trim(), str = Categories %>% str_trim()) %>% 
-    select( id, str )
+    select( id, str ) %>% unique()
   
   elements.de = elements %>% select( dataElement.id, dataElement ) %>% 
     mutate( id = dataElement.id %>% str_trim(), str = dataElement %>% str_trim()) %>% 
@@ -545,7 +549,16 @@ translate_formula = function( f , elements , translate_from , translate_to , bra
   extract1 = str_extract_all( f , reg1 ) %>% unlist %>% 
     gsub( "\\[|\\]" , "", . ) %>% str_trim()
   loc1 = str_locate_all( f , reg1 )[[1]] %>% as_tibble()
-  all_text = tibble( start = loc1$start , end = loc1$end,  {{ translate_from }} :=  extract1 )
+  all_text = tibble( start = loc1$start , 
+                     end = loc1$end,  
+                     {{ translate_from }} :=  extract1 
+                     )
+  #test...
+  # all_text = tibble( start = loc1$start , 
+  #                    end = loc1$end,  
+  #                    str =  extract1 
+  # )
+  
   # all_text
   
   # identify text between two brackets that follows a period
@@ -553,8 +566,13 @@ translate_formula = function( f , elements , translate_from , translate_to , bra
   extract2 = str_extract_all( f , reg2 ) %>% unlist %>% 
     gsub( "\\[|\\]" , "", . ) %>% substring(., 2) %>% str_trim()
   loc2 = str_locate_all( f , reg2 )[[1]] %>% as_tibble() 
+  
   cc_text = tibble( start = loc2$start , end = loc2$end, {{ translate_from }} := extract2 )
-  # cc_text
+  
+  # test
+  # cc_text = tibble( start = loc2$start , 
+  #                   end = loc2$end, 
+  #                   str = extract2 )
   
   
   de = anti_join( all_text, cc_text , by = 'end' ) 
