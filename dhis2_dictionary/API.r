@@ -79,22 +79,23 @@ get = function( source_url , .print = TRUE , ...){
 
 date_code = function( 
   years = NULL , 
-  months = NULL ){
+  months = NULL ,
+  YrsPrevious = 5 ){
   
   if ( is.null( months ) )  months = 1:12
   
   if ( is.null( years ) ){
     
     this.year = year( Sys.Date() )
-    FiveYrsPrevious = this.year - 4
+    YrsPrevious = this.year - YrsPrevious
     
-    years = FiveYrsPrevious:this.year
+    years = YrsPrevious:this.year
   }
   
   # get current month.  List months from Jan/FiveYearsPrevious 
   # through month before current month
   library( zoo )
-  startMonth = as.yearmon(FiveYrsPrevious )
+  startMonth = as.yearmon( YrsPrevious )
   endMonth = Sys.yearmon()
   months = seq( startMonth, endMonth , 1/12 ) %>% format(., "%Y%m")
   
@@ -113,6 +114,7 @@ api_url = function( baseurl, de ,  periods, orgUnits , aggregationType ){
   
   url <- paste0( baseurl, 
                  "api/analytics/dataValueSet.json?" ,
+                 # "api/analytics.json?" ,
                  "&dimension=ou:", orgUnits , 
                  "&dimension=pe:" , periods ,
                  "&dimension=dx:" , de ,

@@ -6,12 +6,13 @@ source( "API.r")
 formulaNamePlaceHolderText = "Choose a name for the formula, like 'total confirmed cases'"  
 formulaPlaceHolderText = "Select dataElements below. Each will be added with a plus sign.  You may edit, using any mathematical operator (+,-,*,/) and parentheses."  
 
-periods = scan( text = "THIS_WEEK, LAST_WEEK, LAST_4_WEEKS, LAST_12_WEEKS, LAST_52_WEEKS,
+periods = scan( text = "months_last_3_years, months_last_5_years, 
                  THIS_MONTH, LAST_MONTH, THIS_BIMONTH, LAST_BIMONTH, THIS_QUARTER, LAST_QUARTER,
                  THIS_SIX_MONTH, LAST_SIX_MONTH, MONTHS_THIS_YEAR, QUARTERS_THIS_YEAR,
                  THIS_YEAR, MONTHS_LAST_YEAR, QUARTERS_LAST_YEAR, LAST_YEAR, LAST_5_YEARS, LAST_12_MONTHS,
                  LAST_3_MONTHS, LAST_6_BIMONTHS, LAST_4_QUARTERS, LAST_2_SIXMONTHS, THIS_FINANCIAL_YEAR,
-                 LAST_FINANCIAL_YEAR, LAST_5_FINANCIAL_YEARS", what ="" ) %>% gsub(",", "" , .)
+                 LAST_FINANCIAL_YEAR, LAST_5_FINANCIAL_YEARS , 
+                THIS_WEEK, LAST_WEEK, LAST_4_WEEKS, LAST_12_WEEKS, LAST_52_WEEKS", what ="" ) %>% gsub(",", "" , .)
 
 levels = scan( text = "LEVEL-1, LEVEL-2, LEVEL-3, LEVEL-4", what ="" ) %>% gsub(",", "" , .)
 
@@ -66,7 +67,9 @@ malaria_data_formulas_UI <- function( id ) {
                               column( 8 , 
                                       selectInput( ns('selectFormula') , "Choose Formula" , choices = NULL ) ,
                                       
-                                      checkboxInput( ns('showCategoryOptions') , "List category option as a separate line" )
+                                      checkboxInput( ns('showCategoryOptions') , 
+                                                     "List category option as a separate line" ,
+                                                     value = TRUE )
                               ) ,
                               
                               column( 4 , 
@@ -81,7 +84,7 @@ malaria_data_formulas_UI <- function( id ) {
     
                 ) ,
                 
-                tabPanel("Download formula data",
+                tabPanel("Request formula data",
                          fluidRow( 
                            column( 3 ,
                                    selectInput( ns("period") , "Period:", selected = "LAST_YEAR" , 
@@ -120,7 +123,7 @@ malaria_data_formulas_UI <- function( id ) {
                          )
                 ) ,
 
-                tabPanel("Formula Dataset",
+                tabPanel("Summary Dataset",
                          
                          textOutput( ns('formulaExpression') ) ,
                          
@@ -240,7 +243,7 @@ malaria_data_formulas <- function( input, output, session ,
   
  
   # Display table of malaria data elements ####
-  output$malariaDataElements = DT::renderDT( 
+  output$malariaDataElements = renderDT( 
     
     if ( input$showCategoryOptions ){
       mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
@@ -360,10 +363,7 @@ malaria_data_formulas <- function( input, output, session ,
     
     formulaElements() %>% 
       select( -dataElement.id , -displayName , everything() ) , 
-    
-    rownames = FALSE , 
-    server = TRUE, escape = FALSE, 
-    selection = list( mode='single' ) ,
+
     options = DToptions_no_buttons()
     )
   
@@ -441,9 +441,15 @@ malaria_data_formulas <- function( input, output, session ,
       pull( de.cat ) %>%
       paste( collapse = ";")
 
-    periods = input$period 
+
     orgUnits =  input$orgUnits
     aggregationType = 'DEFAULT' 
+    
+    # Periods
+    periods = input$period 
+    if ( periods %in% 'months_last_3_years' ) periods = date_code( YrsPrevious = 3 )
+    if ( periods %in% 'months_last_5_years' ) periods = date_code( YrsPrevious = 5 )
+    print( paste( 'Periods requested are' , periods ) )
     
     # print( baseurl ); print( de ); print( periods ) ; print( orgUnits ); print( aggregationType )
     
@@ -594,30 +600,71 @@ malaria_data_formulas <- function( input, output, session ,
     print( head(dd() ) )
     
     d = dd() %>%
-      select( levelName, orgUnit , orgUnitName, period , dataElement.id , categoryOptionCombo.ids , SUM ) %>%
+      select( levelName, orgUnit , orgUnitName, period , dataElement.id , categoryOptionCombo.ids , 
+              SUM , COUNT ) %>%
       mutate(
         # dataElement.id = paste0( "[" , dataElement.id , "]") ,
         # categoryOptionCombo.ids = paste0( "[" , categoryOptionCombo.ids , "]") ,
-        SUM = as.numeric( SUM )
+        SUM = as.numeric( SUM )  ,
+        COUNT = as.numeric( COUNT )
       ) %>%
       unite( "box" , dataElement.id , categoryOptionCombo.ids, 
              sep = ".", remove = TRUE, na.rm = FALSE 
-             ) %>%
-      complete( box, period , nesting( levelName, orgUnitName, orgUnit )  , 
-                fill = list( SUM = 0 ) 
-                ) %>%
-      pivot_wider(
-        names_from = box,
-        values_from = SUM )
+      ) %>%
+      complete( box, period , nesting( levelName, orgUnitName, orgUnit ) , 
+                fill = list( SUM = 0 ,
+                             COUNT = 0 
+                             ) )  
 
-    # print( '....\n' )
-    # print( head(d) )
+    print( 'this is d....\n' )
     
-      formula_dataset = d %>%
+    print( head(d) )
+    print( colnames(d)  )
+    
+      # formula_dataset = d %>%
+      #   group_by( levelName , orgUnitName, period  ) %>%
+      #   summarise( sum = eval( parse( text  = formula_expression() ) ) )
+      
+      # Combine dataset for sum and counts 
+      dataset_sum = d %>%
+        select( - COUNT ) %>%
+        pivot_wider(
+          names_from = box,
+          values_from = SUM ) %>%
         group_by( levelName , orgUnitName, period  ) %>%
         summarise( sum = eval( parse( text  = formula_expression() ) ) )
       
-      return( formula_dataset )
+      print( head( dataset_sum ) )
+
+      # count expressions...
+      min.fe = paste("min(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
+      max.fe = paste("max(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
+      # any.fe = paste("any(c(" , str_replace_all( formula_expression , fixed("+") , "," ) , "))" )
+      
+      dataset_count = d %>%
+        select( - SUM ) %>%
+        pivot_wider(
+          names_from = box,
+          values_from = COUNT ) %>%
+        group_by( levelName , orgUnitName, period  ) %>%
+        summarise( Count.min = eval( parse( text  = min.fe ) ) ,
+                   Count.max = eval( parse( text  = max.fe ) )
+                   # , any.Count = eval( parse( text  = any.fe ) )
+        )
+      
+      print( 'this is dataset_sum ... \n' )
+      print( head( dataset_sum ) )
+      
+      
+      dataset = inner_join( dataset_sum , 
+                            dataset_count ,
+                            by = c("levelName", "orgUnitName", "period")
+      )
+      
+      print( 'this is dataset ... \n' )
+      print( head( dataset ) )
+      
+      return( dataset )
 
   })
   
@@ -630,10 +677,8 @@ malaria_data_formulas <- function( input, output, session ,
 
     formula_dataset() ,
 
-    rownames = FALSE,
-    filter = 'top' ,
     selection = list( mode='single' ) ,
-    options = DToptions_with_buttons()
+    options = DToptions_no_buttons()
   )
 
 }

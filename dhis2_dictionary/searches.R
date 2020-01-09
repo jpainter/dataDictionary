@@ -6,8 +6,8 @@ malaria_search_strings =  as.character( expression( palu, Pf, plasmodi , micro ,
 anc_iptp_search_words =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')
 anc_iptp_search_strings =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')
 
-attendance_search_words =  as.character( expression( attendance , patient, consultation , fever, fievre ) ) %>% paste( collapse = ', ')
-attendance_search_strings =  as.character( expression( attend , consult ) ) %>% paste( collapse = ', ')
+attendance_search_words =  as.character( expression( attendance , patient, consultation ) ) %>% paste( collapse = ', ')
+attendance_search_strings =  as.character( expression( attend , consult, patient ) ) %>% paste( collapse = ', ')
 
 chw_search_words =  as.character( expression( imci, iccm, commun, CHW, chd, hsa,  village, VHW ) ) %>% paste( collapse = ', ')
 chw_search_strings =  as.character( expression(  ) ) %>% paste( collapse = ', ')

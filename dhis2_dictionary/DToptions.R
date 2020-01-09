@@ -32,6 +32,10 @@ DToptions_no_buttons = function(...){
         dom = 'l<"col-sm-6"i>fprt' ,
         # scrollX = TRUE  ,
         lengthMenu = list( c( -1, 1, 5, 10, 25, -1), list( 'All' , '1', '5' , '10', '25') ) ,
-        columnDefs = list( list(className = 'dt-right', targets="_all" ) ) 
+        columnDefs = list( list(className = 'dt-right', targets="_all" ) ) ,
+        rownames = FALSE , 
+        server = TRUE , 
+        escape = FALSE , 
+        selection = list( mode='single' ) 
   )
 }
