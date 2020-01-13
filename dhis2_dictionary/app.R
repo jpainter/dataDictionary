@@ -5,27 +5,35 @@
 
 # install and load libraries ####
 
-# libraries = as.character(
-#   quote( c( shiny, shinydashboard, shinyBS , plotly, shinyLP , tidyverse, googleVis, scales ,
-#                knitr, rlang, stringi, tidyselect, jsonlite, httr, curl, assertthat, DT ,
-#             knitrProgressBar , futile.logger , utils , textutils , readxl , openxlsx ) )[-1]
-# )
-# 
+libraries = readLines( con = file( 'requirements.txt' ) , warn=FALSE )
+libraries = gsub(" ", "" ,  libraries)
 
 # Function to test if package is installed
-# pkgTest <- function( package.list = libraries ){
-# 
-#   missing.packages = setdiff( package.list , rownames( installed.packages() ) )
-#   if ( length( missing.packages ) > 0 ) install.packages( missing.packages , dependencies = TRUE )
-# }
-# 
-# # Test if packages installed
-# pkgTest( libraries )
-# 
-# # load the packages
-# suppressMessages(
-#   lapply( libraries , require  , character.only = TRUE)
-# )
+pkgTest <- function( package.list = libraries ){
+
+  missing.packages = setdiff( package.list , rownames( installed.packages() ) )
+  
+  if ( length( missing.packages ) > 0 ){
+    print( missing.packages )
+
+    if ( nchar(missing.packages) > 0 ){
+        install.packages( missing.packages
+                          # , dependencies = TRUE ,
+                          # , type="source" ,
+                          # , repos = "https://cran.rstudio.com"
+                          )
+    }
+  }
+    
+}
+
+# Test if packages installed
+pkgTest( libraries )
+
+# load the packages
+suppressMessages(
+  lapply( libraries , require  , character.only = TRUE)
+)
 
 library( shiny )
 library( shinyjs )
@@ -81,12 +89,15 @@ ui <- dashboardPage(
   # useShinyalert(),  # Set up shinyalert
   
   # skin = 'blue',
-  dashboardHeader(title = "What's in your DHIS2?",
-                  titleWidth = 300) ,
+  dashboardHeader(
+    title = "What's in your DHIS2?",
+    titleWidth = 300
+    ) ,
   
   #https://shiny.rstudio.com/reference/shiny/1.0.1/icon.html (choose icon)
   dashboardSidebar(
-    sidebarUserPanel("jp") ,
+    sidebarUserPanel( "What's in your DHIS2?" ) ,
+    
     sidebarMenu(
       
       menuItem( 'Background and Directions' , tabName = "info_page", 
