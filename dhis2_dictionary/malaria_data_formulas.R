@@ -23,69 +23,65 @@ malaria_data_formulas_UI <- function( id ) {
 
   tagList(
 
+    fluidRow(
+        
+      column( 6 , 
+              fileInput( ns('file1'), 'Upload Previously Define Formulas (.xlsx) file', 
+                         accept = c(".xlsx", "xls")  , width = "100%"
+                         )
+                                ) ,
+      column( 6 ,
+              downloadButton( ns('downloadFormulas') , 'Save and Download Formula Definitions' , 
+                              style='margin-top:25px') 
+                            ) 
+      ) ,
+    
     fluidRow( 
-    column( 12 , 
-      textInput( ns("formulaName") , label = "Formula Name", value = "" , 
-                 width = '100%' ,
-                 placeholder = formulaNamePlaceHolderText ) ,
-      
-      textInput( ns("formulaText") , label = "Formula", value = "" , 
-                 width = '100%' ,
-                 placeholder = formulaPlaceHolderText ) 
-    ) 
+        column( 3, 
+                selectInput( ns('selectFormula') , "Choose Formula" , choices = NULL ) ,
+        ) ,
+        
+        column( 3 , 
+                
+              textInput( ns("formulaName") , label = "Formula Name", value = "" , 
+                       width = '100%' ,
+                       placeholder = formulaNamePlaceHolderText )
+        ) ,
+        
+        column( 3 , 
+              actionButton( ns("updateFormulas") , "Update Formulas" ,
+                            style='margin-top:25px' )  
+        )
+      ) ,
+    
+    fluidRow(  
+      column( 12 , 
+        textInput( ns("formulaText") , label = "Formula", value = "" , 
+                   width = '100%' ,
+                   placeholder = formulaPlaceHolderText ) ,
+        
+        textOutput( ns('formulaExpression') ) 
+      )
+        
     ), 
     
-    
     tabsetPanel( type = "tabs", 
-                
-                tabPanel( "Upload and Review Formulas" ,
-                          
-                         fluidRow(
-                           
-                             column( 6 , 
-                                     
-                                fileInput( ns('file1'), 'Upload Formulas (.xlsx) file', 
-                                       accept = c(".xlsx", "xls")  , width = "100%"
-                                       )
-                                ) ,
-                                
-                             column( 6 ,
-
-                                     downloadButton( ns('downloadFormulas') , 'Download Formula Definitions' , style='margin-top:25px') 
-                            
-                                  ) 
-                                ) ,
-                         
-                          DTOutput( ns('contents') ) 
-                          
-                )  ,
  
                 tabPanel( "Build/edit Formulas" ,
                           
-                          fluidRow( 
-                            
-                              column( 8 , 
-                                      selectInput( ns('selectFormula') , "Choose Formula" , choices = NULL ) ,
-                                      
-                                      checkboxInput( ns('showCategoryOptions') , 
-                                                     "List category option as a separate line" ,
-                                                     value = TRUE )
-                              ) ,
-                              
-                              column( 4 , 
-                                      tags$br() ,
-                                      actionButton( ns("updateFormulas") , "Update Formulas") , 
-                              ) 
-                            ) ,
+                          h3( "Select Malaria-relevant Data Elements" , width = '50%') ,
                           
-                          h2( "Select Malaria-relevant Data Elements" ) ,
+                          checkboxInput( ns('showCategoryOptions') , 
+                                "List category option as a separate line" ,
+                                value = TRUE ) ,
 
                           DTOutput( ns('malariaDataElements') )
     
                 ) ,
                 
-                tabPanel("Request formula data",
-                         fluidRow( 
+                tabPanel( "Data" ,
+                          
+                          fluidRow( 
                            column( 3 ,
                                    selectInput( ns("period") , "Period:", selected = "LAST_YEAR" , 
                                                 choices = periods ) 
@@ -94,18 +90,23 @@ malaria_data_formulas_UI <- function( id ) {
  
                                    selectInput( ns("orgUnits") , "Organization Unit Level:", 
                                                 selected = "LEVEL-1" , 
-                                                choices= levels ) 
+                                                choices = levels ) 
                            ) ,
                           column( 6 ,
                                   
                                   tags$br() ,
                                   
-                                   actionButton( ns("requestButton") , "Request data") , HTML('&emsp;') ,
+                                   actionButton( ns("requestButton") , "Request data") , 
+                                  
+                                   HTML('&emsp;') ,
                                   
                                    downloadButton( ns('downloadFormulaData') , 'Download Formula and Data')
                           )   
                          ), 
                          
+                tabsetPanel( 
+                tabPanel("Request formula data",
+                                   
                         fluidRow(
                            
                            column( 4,
@@ -124,15 +125,11 @@ malaria_data_formulas_UI <- function( id ) {
                 ) ,
 
                 tabPanel("Summary Dataset",
-                         
-                         textOutput( ns('formulaExpression') ) ,
-                         
-                         h2('Final Formula Dataset') ,
-                         
+
                          DTOutput( ns('formulaDataset') ) 
-                    
-                         
-                )  
+
+                )
+                ) )
     )
                 
 )}
@@ -142,7 +139,7 @@ malaria_data_formulas <- function( input, output, session ,
                                    malariaDataElements , 
                                    orgUnits, 
                                    login_baseurl  ){
-  
+  # imported reactives ####
   login = reactive({ login_baseurl$login() })
   baseurl = reactive({ login_baseurl$baseurl() })
   instance = reactive({ login_baseurl$instance() })
@@ -487,9 +484,18 @@ malaria_data_formulas <- function( input, output, session ,
    })
   
   # display requested formula data ####
+  
+  formulaData = reactive({
+         if ( resetData$clearTable ){ 
+           return() 
+           } else {
+             dd()
+             } 
+   })
+  
   output$formulaData = renderDT( 
     
-    dd() , 
+    formulaData() , 
     
     rownames = FALSE , 
     filter = 'top' ,
@@ -498,11 +504,20 @@ malaria_data_formulas <- function( input, output, session ,
     options = DToptions_no_buttons()
     )
   
-  # empty table if formula elements change
-  # observeEvent( formulaElements(), {  output$formulaData = renderDT() } )
+  # empty table if formula elements change ####
+   
+    resetData <- reactiveValues( clearTable = TRUE )
+    
+    observeEvent( c( input$period , input$orgUnits , formulaElements() ), {
+      resetData$clearTable <- TRUE
+    }, priority = 10)
+    
+    observeEvent( input$requestButton, {
+      resetData$clearTable <- FALSE
+    }, priority = 10)
+    
 
-  
-  # Download formulas
+  # Download formulas ####
   
   metadata = reactive({  tibble(
     `Formula Name` = input$formulaName ,
@@ -517,62 +532,7 @@ malaria_data_formulas <- function( input, output, session ,
   )
   })
   
-  # Download formula data ####
-  output$downloadFormulaData <- downloadHandler(
-  
-      
-    filename = function() { 
-      paste0( instance() , "_" , input$formulaName , "_" , Sys.Date()  ,".xlsx"  )
-      } ,
-
-    content = function( file ) {
-      
-      wb <- openxlsx::createWorkbook()
-      
-      sheet1  <- addWorksheet( wb, sheetName = "Metadata")
-      sheet2  <- addWorksheet( wb, sheetName = "Formula")
-      sheet3  <- addWorksheet( wb, sheetName = "Formula Elements")
-      sheet4  <- addWorksheet( wb, sheetName = "formulaData")
-      sheet5  <- addWorksheet( wb, sheetName = "summaryData")
-
-      writeDataTable( wb, sheet1, metadata() , rowNames = FALSE)
-      writeDataTable(  wb, sheet2, formula() , rowNames = FALSE)
-      writeDataTable( wb, sheet3,    formulaElements() %>% 
-                        select( -dataElement.id , -displayName , everything() ) , 
-                      rowNames = FALSE)
-      writeDataTable( wb, sheet4, dd() , rowNames = FALSE)
-      writeDataTable( wb, sheet5, formula_dataset() , rowNames = FALSE)
-      
-      openxlsx::saveWorkbook( wb , file , overwrite = TRUE )   
-      
-     }
-  )
-  
-  output$downloadFormulas <- downloadHandler(
-    
-    filename = function() { 
-      paste0( instance() , "_Formulas_" , Sys.Date()  ,".xlsx" ) 
-      },
-    
-    content = function( file ) {
-      
-      wb <- openxlsx::createWorkbook()
-      
-      sheet2  <- addWorksheet( wb, sheetName = "Formula")
-      sheet3  <- addWorksheet( wb, sheetName = "Formula Elements")
-      
-      writeDataTable(  wb, sheet2, formula_table() , rowNames = FALSE)
-      writeDataTable( wb, sheet3,    formulaElements() %>% 
-                        select( -dataElement.id , -displayName , everything() ) , 
-                      rowNames = FALSE)
-      
-      openxlsx::saveWorkbook( wb , file , overwrite = TRUE )   
-      
-    }
-  )
-  
-
-  # Create formula dataset from formula data  ####
+  # Formula Expression  ####
   
   formula_expression = reactive({
     
@@ -592,14 +552,16 @@ malaria_data_formulas <- function( input, output, session ,
 
     return( f )
   })
+ 
+# Formula summary dataset from formula data  ####
   
-  formula_dataset = reactive({ 
+  formulaSummaryDataset = reactive({ 
     
-    req( dd() )
+    req( formulaData() )
     
-    print( head(dd() ) )
+    # print( head(dd() ) )
     
-    d = dd() %>%
+    d = formulaData() %>%
       select( levelName, orgUnit , orgUnitName, period , dataElement.id , categoryOptionCombo.ids , 
               SUM , COUNT ) %>%
       mutate(
@@ -616,15 +578,11 @@ malaria_data_formulas <- function( input, output, session ,
                              COUNT = 0 
                              ) )  
 
-    print( 'this is d....\n' )
-    
-    print( head(d) )
-    print( colnames(d)  )
-    
-      # formula_dataset = d %>%
-      #   group_by( levelName , orgUnitName, period  ) %>%
-      #   summarise( sum = eval( parse( text  = formula_expression() ) ) )
-      
+    # print( 'this is d....\n' )
+    # 
+    # print( head(d) )
+    # print( colnames(d)  )
+ 
       # Combine dataset for sum and counts 
       dataset_sum = d %>%
         select( - COUNT ) %>%
@@ -634,8 +592,6 @@ malaria_data_formulas <- function( input, output, session ,
         group_by( levelName , orgUnitName, period  ) %>%
         summarise( sum = eval( parse( text  = formula_expression() ) ) )
       
-      print( head( dataset_sum ) )
-
       # count expressions...
       min.fe = paste("min(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
       max.fe = paste("max(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
@@ -652,33 +608,83 @@ malaria_data_formulas <- function( input, output, session ,
                    # , any.Count = eval( parse( text  = any.fe ) )
         )
       
-      print( 'this is dataset_sum ... \n' )
-      print( head( dataset_sum ) )
-      
-      
+  
       dataset = inner_join( dataset_sum , 
                             dataset_count ,
                             by = c("levelName", "orgUnitName", "period")
-      )
-      
-      print( 'this is dataset ... \n' )
-      print( head( dataset ) )
-      
+      ) 
+
       return( dataset )
 
   })
   
   
-  # Display formula dataset ####
+  # Display formula summary dataset ####
   
   output$formulaExpression = renderText( formula_expression() )
   
   output$formulaDataset = DT::renderDT(
 
-    formula_dataset() ,
+    formulaSummaryDataset()  ,
 
     selection = list( mode='single' ) ,
     options = DToptions_no_buttons()
   )
+  
+  # Download formula data and dataset ####
+  output$downloadFormulaData <- downloadHandler(
+    
+    
+    filename = function() { 
+      paste0( instance() , "_" , input$formulaName , "_" , Sys.Date()  ,".xlsx"  )
+    } ,
+    
+    content = function( file ) {
+      
+      wb <- openxlsx::createWorkbook()
+      
+      sheet1  <- addWorksheet( wb, sheetName = "Metadata")
+      sheet2  <- addWorksheet( wb, sheetName = "Formula")
+      sheet3  <- addWorksheet( wb, sheetName = "Formula Elements")
+      sheet4  <- addWorksheet( wb, sheetName = "formulaData")
+      sheet5  <- addWorksheet( wb, sheetName = "summaryData")
+      
+      writeDataTable( wb, sheet1, metadata() , rowNames = FALSE)
+      writeDataTable(  wb, sheet2, formula() , rowNames = FALSE)
+      writeDataTable( wb, sheet3,    formulaElements() %>% 
+                        select( -dataElement.id , -displayName , everything() ) , 
+                      rowNames = FALSE)
+      writeDataTable( wb, sheet4, formulaData() , rowNames = FALSE)
+      writeDataTable( wb, sheet5, formulaSummaryDataset() , rowNames = FALSE)
+      
+      openxlsx::saveWorkbook( wb , file , overwrite = TRUE )   
+      
+    }
+  )
+  
+  output$downloadFormulas <- downloadHandler(
+    
+    filename = function() { 
+      paste0( instance() , "_Formulas_" , Sys.Date()  ,".xlsx" ) 
+    },
+    
+    content = function( file ) {
+      
+      wb <- openxlsx::createWorkbook()
+      
+      sheet2  <- addWorksheet( wb, sheetName = "Formula")
+      sheet3  <- addWorksheet( wb, sheetName = "Formula Elements")
+      
+      writeDataTable(  wb, sheet2, formula_table() , rowNames = FALSE)
+      writeDataTable( wb, sheet3,    formulaElements() %>% 
+                        select( -dataElement.id , -displayName , everything() ) , 
+                      rowNames = FALSE)
+      
+      openxlsx::saveWorkbook( wb , file , overwrite = TRUE )   
+      
+    }
+  )
+  
+  
 
 }
