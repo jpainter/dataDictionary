@@ -13,18 +13,16 @@ pkgTest <- function( package.list = libraries ){
 
   missing.packages = setdiff( package.list , rownames( installed.packages() ) )
   
-  if ( length( missing.packages ) > 0 ){
+  if ( length( missing.packages ) > 0 & nchar( missing.packages[1] ) ){
     print( missing.packages )
 
-    if ( nchar(missing.packages) > 0 ){
         install.packages( missing.packages
                           # , dependencies = TRUE ,
                           # , type="source" ,
                           # , repos = "https://cran.rstudio.com"
                           )
     }
-  }
-    
+
 }
 
 # Test if packages installed
