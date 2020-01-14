@@ -9,30 +9,34 @@ libraries = readLines( con = file( 'requirements.txt' ) , warn=FALSE )
 libraries = gsub(" ", "" ,  libraries)
 
 # Function to test if package is installed
-pkgTest <- function( package.list = libraries ){
+# Use this code if rquired packages are not in the shiny docker image and 
+# therefore need to be installed ####
 
-  missing.packages = setdiff( package.list , rownames( installed.packages() ) )
-  
-  if ( length( missing.packages ) > 0 & nchar( missing.packages[1] ) ){
-    print( missing.packages )
+# pkgTest <- function( package.list = libraries ){
+# 
+#   missing.packages = setdiff( package.list , rownames( installed.packages() ) )
+#   
+#   if ( length( missing.packages ) > 0 & nchar( missing.packages[1] ) ){
+#     print( missing.packages )
+# 
+#         install.packages( missing.packages
+#                           # , dependencies = TRUE ,
+#                           # , type="source" ,
+#                           # , repos = "https://cran.rstudio.com"
+#                           )
+#     }
+# 
+# }
+# 
+# # Test if packages installed
+# pkgTest( libraries )
+# 
+# # load the packages
+# suppressMessages(
+#   lapply( libraries , require  , character.only = TRUE)
+# )
 
-        install.packages( missing.packages
-                          # , dependencies = TRUE ,
-                          # , type="source" ,
-                          # , repos = "https://cran.rstudio.com"
-                          )
-    }
-
-}
-
-# Test if packages installed
-pkgTest( libraries )
-
-# load the packages
-suppressMessages(
-  lapply( libraries , require  , character.only = TRUE)
-)
-
+# Load libraries ####
 library( shiny )
 library( shinyjs )
 library( shinydashboard )
