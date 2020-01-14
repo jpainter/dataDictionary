@@ -85,9 +85,13 @@ data_elements <- function( input, output, session , login_baseurl ) {
       
       showModal(modalDialog("Downloading list of data elements", footer=NULL))
       
-      url<-paste0( baseurl() ,"api/dataElements.json?fields=:all&paging=false")
+      
       cols = c( 'id', 'name', 'shortName' , 'displayName', 'displayShortName' , 
                 'zeroIsSignificant' , 'categoryCombo')
+      
+      url <- paste0( baseurl() ,"api/dataElements.json?fields=" ,
+                     paste(cols, collapse = ",") , 
+                     "&paging=false")
       
       dataElements =  get( url )[[1]] %>% select( !!cols )
       
@@ -111,6 +115,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
 
       # data element groups
       url<-paste0( baseurl() , "api/dataElementGroups.json?fields=:all&paging=false")
+      
       cols = c( 'id', 'name' , 'dataElements' )
       
       dataElementGroups =  get( url )[[1]] %>% select( !!cols ) %>%
@@ -141,9 +146,12 @@ data_elements <- function( input, output, session , login_baseurl ) {
     if (  login() ){
       
       showModal(modalDialog("Downloading list of datasets", footer=NULL))
-
-      url<-paste0( baseurl() , "api/dataSets.json?fields=:all&paging=false")
+      
       cols = c( 'id', 'name' , 'periodType' , 'dataSetElements', 'timelyDays' )
+      
+      url <- paste0( baseurl() ,"api/dataSets.json?fields=" ,
+                     paste(cols, collapse = ",") , 
+                     "&paging=false")
       
       dataSets =  get( url )[[1]] %>% select( !!cols ) %>%
         rename( dataSet.id = id, 
@@ -151,19 +159,6 @@ data_elements <- function( input, output, session , login_baseurl ) {
                 # , dataSetElements.id = dataSetElements 
                 )
       
-      # print( glimpse( dataSets$dataSetElements[[1]] ) ) 
-      
-      # print( map_chr( dataSets[1,]$dataSetElements, 1 ))
-      
-        # %>%
-        # # join with data elements to get names of dataset elements 
-        # left_join( dataElements() %>% select( id, shortName ) %>% 
-        #              rename( dataSetElements.id = id , 
-        #                      dataSetElements = shortName ) , 
-        #            by = 'dataSetElements.id'
-        #            ) %>%
-        # select( - dataSetElements.id )
-
       removeModal()
       
       return( dataSets )
@@ -179,6 +174,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
       showModal(modalDialog("Downloading list of categoryCombos", footer=NULL))
       
       url<-paste0( baseurl() , "api/categoryCombos.json?fields=:all&paging=false")
+      
       cols = c( 'id', 'name', 'categoryOptionCombos'  )
       
       categoryCombos =  get( url )[[1]] %>% select( !!cols ) 
@@ -198,6 +194,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
     showModal(modalDialog("Downloading list of categoryOptionCombos", footer=NULL))
     
     url<-paste0( baseurl() , "api/categoryOptionCombos.json?fields=:all&paging=false")
+    
     cols = c( 'id', 'name' )
     
     categoryOptionCombos =  get( url )[[1]] %>% select( !!cols ) 
@@ -335,6 +332,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
   # combine table of data elements and category option combos
   id_names = reactive({
 
+    req( dataElements() )
+    req( categoryOptionCombos() )
 
     de = dataElements()  %>% select( id, name )
 
@@ -379,7 +378,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
   }
 
   indicators_translated = reactive({
- 
+
     showModal(modalDialog("Collating indicator information", footer=NULL))
     
     id_names = id_names()
@@ -486,7 +485,11 @@ data_elements <- function( input, output, session , login_baseurl ) {
 # return ####
   return(  list( dataDictionary = dataDictionary, 
                  indicators = indicators_translated ,
-                 dataSets = dataSets )  
+                 dataSets = dataSets,
+                 categories = categories ,
+                 categoryOptionCombos = categoryOptionCombos ,
+                 categoryCombos = categoryCombos ) 
+           
            ) # return reactive expression with data dictionary
     
 }

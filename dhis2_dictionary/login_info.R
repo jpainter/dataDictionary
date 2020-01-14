@@ -380,11 +380,22 @@ login_info <- function( input, output, session,
   # Variables ####
   
   meta_variables = reactive({
+    
     data_frame( 
+      
     'Organizational units' = nrow( orgUnits$orgUnits() ) %>% scales::comma() ,
-    'Data elements' = nrow( data_elements$dataDictionary() ) %>% scales::comma() ,
+
     'Data sets' = nrow( data_elements$dataSets() ) %>% scales::comma() ,
-    'Indicators' = nrow( data_elements$indicators() ) %>% scales::comma()
+    
+    'Data elements' = nrow( data_elements$dataDictionary() ) %>% scales::comma() ,
+    
+    'Category combos' = nrow( data_elements$categoryCombos() ) %>% scales::comma() ,
+    
+    'Category option combos' = nrow( data_elements$categoryOptionCombos() ) %>% scales::comma() ,
+    
+    'Indicators' = nrow( data_elements$indicators() ) %>% scales::comma() 
+    
+    
     ) %>% gather( 'Variable', 'Number' )
     
   })

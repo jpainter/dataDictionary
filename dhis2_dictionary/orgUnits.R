@@ -76,9 +76,13 @@ org_units <- function( input, output, session , login_baseurl) {
 
       # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
       # if available, use resources method
-      url <- paste0( baseurl() ,"api/organisationUnits.json?fields=:all&paging=false")
+      
       cols = c( 'level' , 'name', 'id', 'shortName' , 'displayName', 'displayShortName', "openingDate" , "leaf" , "parent" )
 
+      url <- paste0( baseurl() ,"api/organisationUnits.json?fields=" ,
+                     paste(cols, collapse = ",") , 
+                     "&paging=false")
+      
       ous =  get( url )[[1]] %>% select( !!cols ) %>%
         left_join( orgUnitLevels() %>% select( level, levelName ) , by = 'level' ) %>%
         select( level, levelName , everything() ) %>%
@@ -110,9 +114,13 @@ org_units <- function( input, output, session , login_baseurl) {
       
       # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
       # if available, use resources method
-      url <- paste0( baseurl() ,"api/organisationUnitLevels.json?fields=:all&paging=false")
       
       cols = c( 'level' , 'name', 'created' , 'lastUpdated' , 'displayName' , 'id' )
+      
+      
+      url <- paste0( baseurl() ,"api/organisationUnitLevels.json?fields=" ,
+                     paste(cols, collapse = ",") , 
+                     "&paging=false")
       
       ousLevels =  get( url )[[1]]  %>% select( !!cols ) %>% arrange( level ) %>%
         rename( levelName = name ) 
