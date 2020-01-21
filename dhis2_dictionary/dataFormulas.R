@@ -14,7 +14,7 @@ periods = scan( text = "months_last_3_years, months_last_5_years,
                  LAST_FINANCIAL_YEAR, LAST_5_FINANCIAL_YEARS , 
                 THIS_WEEK, LAST_WEEK, LAST_4_WEEKS, LAST_12_WEEKS, LAST_52_WEEKS", what ="" ) %>% gsub(",", "" , .)
 
-levels = scan( text = "LEVEL-1, LEVEL-2, LEVEL-3, LEVEL-4", what ="" ) %>% gsub(",", "" , .)
+levels = scan( text = "LEVEL-1, LEVEL-2, LEVEL-3, LEVEL-4 , Leaf" , what ="" ) %>% gsub(",", "" , .)
 
 # Module UI function  ####
 malaria_data_formulas_UI <- function( id ) {
@@ -26,7 +26,7 @@ malaria_data_formulas_UI <- function( id ) {
     fluidRow(
         
       column( 6 , 
-              fileInput( ns('file1'), 'Upload Previously Define Formulas (.xlsx) file', 
+              fileInput( ns('file1'), 'Upload Previously Defined Formulas (.xlsx) file', 
                          accept = c(".xlsx", "xls")  , width = "100%"
                          )
                                 ) ,

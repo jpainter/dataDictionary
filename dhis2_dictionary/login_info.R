@@ -2,35 +2,6 @@
 
 # Helper functions
 
-# Login ####
-loginDHIS2<-function( baseurl, username, password) {
-  
-  url<-paste0( baseurl, "api/me" )
-  
-  r <-  GET( url, authenticate(username, password) ) 
-  
-  assert_that( r$status_code == 200L ) 
-}
-
-# JSON helper function ####
-## gets json text from url and converts to data frame 
-get = function( source_url , .print = TRUE , ...){
-  
-  if ( .print ) print( paste( "downloading from" , source_url , "...") )
-  
-  from_url =  GET( source_url ) 
-  
-  if ( from_url$status_code != 200 ) return( FALSE )
-  
-  g = fromJSON( 
-    
-    suppressMessages( content( from_url , "text") ) 
-  )
-  
-  return( g )
-  
-}
-
 # User Interface ####
 login_info_UI <- function( id ) {
   # Create a namespace function using the provided id
@@ -50,9 +21,14 @@ login_info_UI <- function( id ) {
                            
                            passwordInput( ns("password") , label = "Password:", NULL ), # "district"
                            
-                           actionButton( ns("loginButton"), "Login" , style='margin-top:25px' ) ,
+                           textOutput( ns("Status") ) ,
                            
-                           checkboxInput( ns("demo") , label = "Click to choose from one of the DHIS2 demo instances", FALSE ) ,
+                           actionButton( ns("loginButton"), "Request Metadata" , style='margin-top:25px' ) ,
+                           
+                           checkboxInput( ns("demo") , 
+                                          label = "Click to choose from one of the DHIS2 demo instances", 
+                                          FALSE 
+                                           ) ,
                            
                            useShinyjs() ,  # Set up shinyjs
                            selectInput( ns('instance') , "Instance" , choices = NULL ) , 
@@ -104,6 +80,11 @@ login_info <- function( input, output, session,
                         data_elements , 
                         malariaDataElements ) {
   
+  # reactives to toggle login status
+  login = reactiveVal( FALSE )
+  loginFetch = reactiveVal( FALSE )
+  
+  
   # hide instance choice list unless demo checked
   shinyjs::hideElement( id = "instance" )
   shinyjs::hideElement( id = "instancesFile" )
@@ -118,7 +99,7 @@ login_info <- function( input, output, session,
         
       } else {
           
-        print( 'n0 demo' )
+        print( 'no demo' )
         shinyjs::hideElement("instance")
         shinyjs::hideElement( "instancesFile" )
         
@@ -169,7 +150,7 @@ login_info <- function( input, output, session,
    observe({
      req( input$instance )
      
-      login( FALSE ) # After change, no login until lgin  button pushed
+      loginFetch( FALSE ) # After change, no login until lgin  button pushed
       
       i_row = which( instances()$Instance %in% input$instance )
       
@@ -210,36 +191,68 @@ login_info <- function( input, output, session,
     
   })
   
-  login = reactiveVal( FALSE )
+ 
+  # Request Metatadata
+  observeEvent( input$loginButton  , {
+    if ( login()  ){ 
+      
+        loginFetch( TRUE )
+      
+      } else {
+        
+        loginFetch( FALSE )
+      }
+})
+  
+  credentialsProvided <- reactive({
+    
+    credentialsProvided = !is_empty( baseurl() ) && !is_empty( input$username ) && !is_empty( input$password ) 
+    
+    print( paste( 'toLogin' , credentialsProvided ))
+    
+    return( credentialsProvided )
+    })
+  
+  
+  # Login Status
+  observeEvent( credentialsProvided() , {
 
-  observeEvent( input$loginButton , { 
-
+    print( paste( 'login' ,  baseurl() , input$username, input$password  ))
+    
     if ( is_empty( baseurl() ) | is_empty( input$username ) | is_empty( input$password ) ){
 
       login( FALSE )
-      return( login() )
     }
 
     l = try( loginDHIS2( baseurl() , input$username, input$password) )
 
+    print( paste( 'try loginDHIS2 is' , l , baseurl() , input$username, input$password  ))
+    
     if ( class( l ) == "logical" ) {
 
       login( TRUE )
-      return( login() )
 
     } else {
 
       login( FALSE )
-      return( login()  )
-
     }
 
+    print( paste( 'observe event input$password, login() is' , login() ))
+  })
+  
+  # Update logged in status
+  observeEvent( login() , {
+    if (login() ){
+      output$Status = renderText( 'Logged in' )
+    } else {
+      output$Status = renderText( 'Not logged in' )
+      }
   })
   
   system.info = reactive({
     
-    req( login() )
-    if ( login() ){
+    req( loginFetch() )
+    if ( loginFetch() ){
       # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
       # if available, use resources method
       
@@ -416,7 +429,7 @@ login_info <- function( input, output, session,
   )
   
 
-  return( list( login = login , baseurl = baseurl , instance = instance  ) )
+  return( list( login = loginFetch , baseurl = baseurl , instance = instance  ) )
     
 }
 
