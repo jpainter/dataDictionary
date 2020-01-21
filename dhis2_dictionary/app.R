@@ -5,13 +5,13 @@
 
 # install and load libraries ####
 
-libraries = readLines( con = file( 'requirements.txt' ) , warn=FALSE )
-libraries = gsub(" ", "" ,  libraries)
-
 # Function to test if package is installed
 # Use this code if rquired packages are not in the shiny docker image and 
 # therefore need to be installed ####
 
+# libraries = readLines( con = file( 'requirements.txt' ) , warn=FALSE )
+# libraries = gsub(" ", "" ,  libraries)
+# 
 # pkgTest <- function( package.list = libraries ){
 # 
 #   missing.packages = setdiff( package.list , rownames( installed.packages() ) )
@@ -35,6 +35,7 @@ libraries = gsub(" ", "" ,  libraries)
 # suppressMessages(
 #   lapply( libraries , require  , character.only = TRUE)
 # )
+
 
 # Load libraries ####
 library( shiny )
@@ -77,9 +78,10 @@ library( rmapshaper )
 source( 'API.r' )
 source( 'login_info.R' )
 source( 'orgUnits.R' )
-source( 'data_elements.R' )
-source( 'malaria_data_elements.R' )
-source( 'malaria_data_formulas.R' )
+source( 'dataElements.R' )
+source( 'malariaDataElements.R' )
+source( 'dataFormulas.R' )
+source( 'dataQuality.R' )
 source( 'DToptions.R')
 source( 'ous_from_geoFeatures.R' )
 
@@ -201,6 +203,12 @@ tabItem(tabName = 'OU',
               orgUnits_UI( "ou" )
               ) ,
 
+## "Data Quality" Tab ####
+tabItem(tabName = 'DQ',
+        
+              dataQuality_UI( "dq" )
+              ) ,
+
 ## Contact Tab ####
 tabItem(tabName = 'contact',
         fluidRow(
@@ -255,6 +263,11 @@ server <-  function(input, output, session){
                                       login_baseurl = login_baseurl )
    
    malaria_data_formulas = callModule( malaria_data_formulas , "formulas" ,
+                                      malariaDataElements = malaria_data_elements ,
+                                      orgUnits = orgUnits ,  
+                                      login_baseurl = login_baseurl ) 
+   
+   dataQuality = callModule( dataQuality , "dq" ,
                                       malariaDataElements = malaria_data_elements ,
                                       orgUnits = orgUnits ,  
                                       login_baseurl = login_baseurl )

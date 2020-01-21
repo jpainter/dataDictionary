@@ -83,7 +83,8 @@ org_units <- function( input, output, session , login_baseurl) {
                      paste(cols, collapse = ",") , 
                      "&paging=false")
       
-      ous =  get( url )[[1]] %>% select( !!cols ) %>%
+      ous =  get( url )[[1]] %>% 
+        select( !!cols ) %>%
         left_join( orgUnitLevels() %>% select( level, levelName ) , by = 'level' ) %>%
         select( level, levelName , everything() ) %>%
         arrange( level )
@@ -122,7 +123,9 @@ org_units <- function( input, output, session , login_baseurl) {
                      paste(cols, collapse = ",") , 
                      "&paging=false")
       
-      ousLevels =  get( url )[[1]]  %>% select( !!cols ) %>% arrange( level ) %>%
+      ousLevels =  get( url )[[1]]  %>% 
+        select( !!cols ) %>% 
+        arrange( level ) %>%
         rename( levelName = name ) 
       
       removeModal()
@@ -164,22 +167,35 @@ org_units <- function( input, output, session , login_baseurl) {
   geoFeatures = reactive({
     
     if (  login() ){
+
+      showModal(modalDialog("Downloading list of organisation units", footer=NULL))
+
+      # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
+      # if available, use resources method
       
-      showModal(modalDialog("Downloading list of geoFeatures (coordinates)", footer=NULL))
+      cols = c( 'level' , 'name', 'id', 'shortName' , 'displayName', 'displayShortName', "openingDate" , "leaf" , "parent" ,
+                'geometry' )
+
+      url <- paste0( baseurl() ,"api/organisationUnits.json?fields=" ,
+                     paste(cols, collapse = ",") , 
+                     "&paging=false")
       
-      pb <- progress_estimated( 9 )
-      geoFeatures_from_server = map( 0:8 , ~geoFeatures_download(.x, pb ) )
-      geoFeatures = reduce( geoFeatures_from_server, bind_rows ) %>%
-        select( -httpStatus , -httpStatusCode , -status , -message )
+      ous = GET( url ) %>% content(. , "text")
+  
+      # ous =  get( url )[[1]] %>% 
+      #   select( !!cols ) %>%
+      #   left_join( orgUnitLevels() %>% select( level, levelName ) , by = 'level' ) %>%
+      #   select( level, levelName , everything() ) %>%
+      #   arrange( level ) 
       
-      # # remove potential duplicates
-      geoFeatures = geoFeatures[ !is.na(geoFeatures$id) ,]
-      # # geoFeatures = geoFeatures[ !duplicated(geoFeatures) ,]
+      print( glimpse( ous ) )
       
+      ous.sf = ous %>% read_sf()
+
       removeModal()
-      
-      return( geoFeatures )
-      
+
+      return( ous )
+
     } else { "Unable to login to server" }
   })
   

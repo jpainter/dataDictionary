@@ -22,6 +22,9 @@ retry <- function( expr, isError=function(x) "try-error" %in% class(x),
   retval = try( eval(expr) )
   
   while ( isError(retval) ) {
+    
+    print( eval(expr)  )
+    
     attempts = attempts + 1
     
     if (attempts >= maxErrors) {
@@ -46,7 +49,7 @@ retry <- function( expr, isError=function(x) "try-error" %in% class(x),
 
 # JSON helper function ####
 ## gets json text from url and converts to data frame 
-get = function( source_url , .print = TRUE , ...){
+get = function( source_url , .print = TRUE , json = TRUE , ...){
   
   # https://stackoverflow.com/questions/57198836
   httr::set_config(httr::config(ssl_verifypeer=0L))
@@ -55,21 +58,78 @@ get = function( source_url , .print = TRUE , ...){
   
   from_url =  GET( source_url ) 
   
+  print( 'GET completed')
+  print( from_url )
+  
   get_content = content( from_url , "text")
   
+  print( 'get_content')
+  
   if ( from_url$status_code != 200 ){
-    showModal( modalDialog( get_content[[1]] ) )
-    return( get_content[[1]] )
+    # showModal( modalDialog( get_content[[1]] ) )
+    # return( get_content[[1]] )
+    print( paste( 'Status code' , from_url$status_code ) )
+    print( paste( 'get_content class' , class( get_content ) ) )
+    print( get_content )
+    return( get_content )
   } 
   
   # test if return valid content
-  is.json = validate( get_content )
+  is.json = jsonlite::validate( get_content )
   
-  if ( !is.json[[1]] ) return( NULL )
+  print( paste( 'testing if json' , is.json ) )
   
-  g = fromJSON( get_content )
+  if ( json ){ 
+    
+    if ( !is.json ){
+      print( get_content )
+      return( NA )
+      
+    } else {
+
+      g = fromJSON( get_content ) 
+      
+      if (length(g) == 0) return( NA ) 
+      
+      return( g )
+    }
+    
+  } else {
+    g = get_content 
+    return( g )
+  }
   
-  return( g )
+  
+  
+}
+
+get_in_parts = function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
+  
+  # withProgress( message = 'requesting data' ,  value = 0, {
+  #   
+  #   de = str_split( de., ";" ) %>% unlist()
+  #   n = length( de )
+  #   data = list( n )
+  #   
+  #   for (i in 1:n) {
+  #     
+  #     # Each time through the loop, add another row of data. This is
+  #     # a stand-in for a long-running computation.
+  #     de.i = de.[ i ]
+  #     
+  #     url = api_url( baseurl. , de. , periods. , orgUnits. , aggregationType. )
+  #     
+  #     url = paste0( baseurl , de.i , endingurl )
+  #     data <- get( url )
+  #     
+  #     # Increment the progress bar, and update the detail text.
+  #     incProgress(1/n, detail = paste("Doing request for", de.i ))
+  #     
+  #   }
+  #   
+  #   return( bind_rows( data ) )
+  #   
+  # })
   
 }
 
@@ -121,7 +181,7 @@ api_url = function( baseurl, de ,  periods, orgUnits , aggregationType ){
                  "&displayProperty=NAME",
                  "&aggregationType=" , aggregationType )
   
-  print( url )
+  # print( url )
   return( url )
 }
 

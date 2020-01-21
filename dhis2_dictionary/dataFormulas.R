@@ -299,8 +299,6 @@ malaria_data_formulas <- function( input, output, session ,
     
     ft = input$formulaText
     
-    print( paste('formuals characters = ', nchar(ft)))
-    
     if ( nchar( ft ) == 0 ) return( mde() %>% filter( FALSE ) )
     
     # Parse elements separated by mathematical operator between ] and [
@@ -355,7 +353,7 @@ malaria_data_formulas <- function( input, output, session ,
     
   })
   
-  # display data elements used in formula
+  # display data elements used in formula ####
   output$formulaElements = renderDT( 
     
     formulaElements() %>% 
@@ -373,20 +371,64 @@ malaria_data_formulas <- function( input, output, session ,
 
   fetch <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
     
+    print( paste( 'period is ', periods. ) )
+    periods_vector = str_split( periods. , ";" ) %>% unlist
+    n_periods = length( periods_vector )
+    print( paste( 'n_periods' , n_periods ))
+    
+    data = list( n_periods )
+    
+    for ( i in 1:n_periods ){
+      
+      data[[i]] = fetch_get( baseurl. , de. , periods_vector[i] , orgUnits. , aggregationType. )
+    }
+    
+    return( bind_rows( data ) )
+  }
+  
+  fetch_get <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
+    
     url = api_url( baseurl. , de. , periods. , orgUnits. , aggregationType. )
     
-    fetch = retry( get( url , .print = TRUE )[[1]] ) # if time-out or other error, will retry 
+    # fetch = retry( get( url , .print = TRUE )[[1]] ) # if time-out or other error, will retry 
+    fetch = get( url , .print = TRUE )
+    
+    print( paste( 'fetch class' , class( fetch ) ) )
+    print( paste( 'fetch class[[1]]' , class( fetch[[1]] ) ) ) 
+    fetch = fetch[[1]] 
     
     # if returns a data frame of values (e.g. not 'server error'), then keep
+    print( paste( 'did fetch return data frame?' , is.data.frame( fetch )))
     if ( is.data.frame( fetch ) ){ 
       
-      data.return =  fetch %>% select( -storedBy, -created, -lastUpdated, -comment )
+    # remove unneeded cols
       
-    } else {
+      cols = colnames( fetch ) 
+      
+      unneeded.cols = which( cols %in% c( 'storedBy', 'created', 'lastUpdated', 'comment' ))
+    
+      print( glimpse( fetch )  )
+      
+      print( paste( 'unneeded cols' , 
+                    paste( unneeded.cols , collapse = "," ))
+      )
+      
+      data.return = fetch %>% select( -unneeded.cols ) %>% as_tibble()
+      
+      print( paste( 'col names data', 
+                    paste( colnames( data.return ) , collapse = "," ) 
+                    )
+      )
+      
+      } else {
+      
+      print( fetch )
+      
+      de.cat = str_split( de. , fixed(".")) %>% unlist  
       
       data.return  = tibble( 
-        dataElement = de. , 
-        categoryOptionCombo = NULL , 
+        dataElement = de.cat[1] , 
+        categoryOptionCombo = de.cat[2] , 
         period =  periods. ,
         orgUnit =  orgUnits. ,
         aggregationType = aggregationType. ,

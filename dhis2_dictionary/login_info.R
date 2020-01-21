@@ -381,7 +381,7 @@ login_info <- function( input, output, session,
   
   meta_variables = reactive({
     
-    data_frame( 
+    tibble( 
       
     'Organizational units' = nrow( orgUnits$orgUnits() ) %>% scales::comma() ,
 
