@@ -6,7 +6,7 @@ source( "API.r")
 formulaNamePlaceHolderText = "Choose a name for the formula, like 'total confirmed cases'"  
 formulaPlaceHolderText = "Select dataElements below. Each will be added with a plus sign.  You may edit, using any mathematical operator (+,-,*,/) and parentheses."  
 
-periods = scan( text = "months_last_year, months_last_3_years, months_last_5_years, 
+periods = scan( text = "months_last_year, months_last_2_years, months_last_3_years, months_last_4_years, months_last_5_years, 
                  THIS_MONTH, LAST_MONTH, THIS_BIMONTH, LAST_BIMONTH, THIS_QUARTER, LAST_QUARTER,
                  THIS_SIX_MONTH, LAST_SIX_MONTH, MONTHS_THIS_YEAR, QUARTERS_THIS_YEAR,
                  THIS_YEAR, MONTHS_LAST_YEAR, QUARTERS_LAST_YEAR, LAST_YEAR, LAST_5_YEARS, LAST_12_MONTHS,
@@ -528,7 +528,9 @@ malaria_data_formulas <- function( input, output, session ,
     periods = input$period 
 
     if ( periods %in% 'months_last_year' ) periods = date_code( YrsPrevious = 1 )
+    if ( periods %in% 'months_last_2_years' ) periods = date_code( YrsPrevious = 2 )
     if ( periods %in% 'months_last_3_years' ) periods = date_code( YrsPrevious = 3 )
+    if ( periods %in% 'months_last_4_years' ) periods = date_code( YrsPrevious = 4 )
     if ( periods %in% 'months_last_5_years' ) periods = date_code( YrsPrevious = 5 )
     print( paste( 'Periods requested are' , periods ) )
     
@@ -596,6 +598,8 @@ malaria_data_formulas <- function( input, output, session ,
   limitDisplayMessage = reactive({ 
     req( dd() )
     
+    if ( resetData$clearTable ) return()
+    
     print( paste( 'nrow(dd())' , nrow(dd()))) 
     
     if ( nrow( dd() ) > 10000 ){ 
@@ -608,10 +612,12 @@ malaria_data_formulas <- function( input, output, session ,
     )
     })
   
-  output$limitDisplay = renderText({ h4( limitDisplayMessage() ) })
+  output$limitDisplay = renderText({ limitDisplayMessage()  })
    
   limitSummaryTableMessage = reactive({ 
     req( formulaSummaryDataset() )
+    
+    if ( resetData$clearTable ) return()
     
     print( paste( 'nrow(formulaSummaryDataset)' , nrow(formulaSummaryDataset())) )
     
@@ -625,7 +631,7 @@ malaria_data_formulas <- function( input, output, session ,
     )
   })
   
-  output$limitSummaryTableMessage = renderText({ h4( limitSummaryTableMessage() ) })
+  output$limitSummaryTableMessage = renderText({ limitSummaryTableMessage()  })
   
 
   
@@ -706,16 +712,25 @@ malaria_data_formulas <- function( input, output, session ,
 
     # print( 'this is d....\n' )
     # 
-    print( paste( 'head(d)' , head(d) ) )
-    print( paste( 'colnames d' , colnames(d)  ) )
- 
+    print( paste( 'colnames(d)' , colnames(d) ) )
+    print( paste( 'nrow(d)' , nrow(d) ) )
+    # count( d, box )
+    # count( d, period )
+    # count( d , orgUnitName )
+    # count( d , period , levelName )
+
       # Combine dataset for sum and counts 
-      dataset_sum = d %>%
+      ds = d %>%
         select( - COUNT ) %>%
         pivot_wider(
           names_from = box,
           values_from = SUM ) %>%
-        group_by( levelName , orgUnitName, period  ) %>%
+        group_by( levelName , orgUnitName, period  ) 
+      
+      print( paste( 'colnames(ds)' , colnames(ds) ) )
+      print( paste( 'nrow(ds)' , nrow(ds) ) )
+      
+      dataset_sum = ds %>%
         summarise( sum = eval( parse( text  = formula_expression() ) ) )
       
       # count expressions...
@@ -754,7 +769,7 @@ malaria_data_formulas <- function( input, output, session ,
   
   output$formulaSummaryDataset = DT::renderDT(
 
-    head( formulaSummaryDataset() , 1000 ) ,
+    head( formulaSummaryDataset() , 10000 ) ,
 
     rownames = FALSE , 
     # filter = 'top' ,
