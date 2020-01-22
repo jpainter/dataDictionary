@@ -69,7 +69,8 @@ org_units <- function( input, output, session , login_baseurl) {
  
 
   orgUnits = reactive({
-
+    req( login() )
+    print( paste( 'orgUnits' ))
     if (  login() ){
 
       showModal(modalDialog("Downloading list of organisation units", footer=NULL))
@@ -96,12 +97,16 @@ org_units <- function( input, output, session , login_baseurl) {
     } else { "Unable to login to server" }
   })
   
-  n_orgUnits_level = reactive({ orgUnits() %>% count( level ) })
+  n_orgUnits_level = reactive({ 
+    req( orgUnits() )
+    print( paste( 'n_orgunits_level' ))
+    orgUnits() %>% count( level ) 
+    })
     
   
   n_orgUnits = reactive({
     req( orgUnits() )
-    ou.rows = nrow( orgUnits )
+    ou.rows = nrow( orgUnits() )
     paste( ou.rows , 'organisation units' )
 
   })
@@ -137,6 +142,8 @@ org_units <- function( input, output, session , login_baseurl) {
   
   
   orgUnitLevels_with_counts = reactive({ 
+    req( orgUnitLevels() )
+    req(  n_orgUnits_level() )
     
     inner_join( orgUnitLevels() , n_orgUnits_level()  , by = 'level' ) %>%
       rename( Number_Units = n ) %>%

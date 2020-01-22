@@ -76,7 +76,7 @@ login_info_UI <- function( id ) {
 
 # Server function ####
 login_info <- function( input, output, session, 
-                        orgUnits ,
+                        org_Units ,
                         data_elements , 
                         malariaDataElements ) {
   
@@ -378,8 +378,8 @@ login_info <- function( input, output, session,
 
       writeDataTable( wb, sheet1, system.info() , rowNames = FALSE )
       writeDataTable(  wb, sheet2, meta_variables() , rowNames = FALSE )
-      writeDataTable( wb, sheet3,  orgUnits$orgUnitLevels()  )
-      writeDataTable( wb, sheet4, orgUnits$orgUnits() %>%
+      writeDataTable( wb, sheet3,  org_Units$orgUnitLevels()  )
+      writeDataTable( wb, sheet4, org_Units$orgUnits() %>%
                         mutate( parent = "" )
                         , rowNames = FALSE )
       writeDataTable( wb, sheet5, data_elements$dataDictionary() , rowNames = FALSE )
@@ -396,7 +396,7 @@ login_info <- function( input, output, session,
     
     tibble( 
       
-    'Organizational units' = nrow( orgUnits$orgUnits() ) %>% scales::comma() ,
+    'Organizational units' = nrow( org_Units$orgUnits() ) %>% scales::comma() ,
 
     'Data sets' = nrow( data_elements$dataSets() ) %>% scales::comma() ,
     
