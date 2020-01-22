@@ -14,7 +14,7 @@ periods = scan( text = "months_last_3_years, months_last_5_years,
                  LAST_FINANCIAL_YEAR, LAST_5_FINANCIAL_YEARS , 
                 THIS_WEEK, LAST_WEEK, LAST_4_WEEKS, LAST_12_WEEKS, LAST_52_WEEKS", what ="" ) %>% gsub(",", "" , .)
 
-levels = scan( text = "LEVEL-1, LEVEL-2, LEVEL-3, LEVEL-4 , Leaf" , what ="" ) %>% gsub(",", "" , .)
+levels = scan( text = "LEVEL-1, LEVEL-2, LEVEL-3, LEVEL-4 , LEVEL-5, LEVEL-6 , Leaf , All levels" , what ="" ) %>% gsub(",", "" , .)
 
 # Module UI function  ####
 malaria_data_formulas_UI <- function( id ) {
@@ -26,37 +26,43 @@ malaria_data_formulas_UI <- function( id ) {
     fluidRow(
         
       column( 6 , 
-              fileInput( ns('file1'), 'Upload Previously Defined Formulas (.xlsx) file', 
+              fileInput( ns('file1'), 
+                         h4( 'Upload Previously Defined Formulas (.xlsx) file'  ), 
                          accept = c(".xlsx", "xls")  , width = "100%"
                          )
                                 ) ,
       column( 6 ,
-              downloadButton( ns('downloadFormulas') , 'Save and Download Formula Definitions' , 
+              downloadButton( ns('downloadFormulas') , 
+                              h5( 'Save and Download Formula Definitions' ) , 
                               style='margin-top:25px') 
                             ) 
       ) ,
     
     fluidRow( 
         column( 3, 
-                selectInput( ns('selectFormula') , "Choose Formula" , choices = NULL ) ,
+                selectInput( ns('selectFormula') , 
+                             "Choose Formula" , choices = NULL ) ,
         ) ,
         
         column( 3 , 
                 
-              textInput( ns("formulaName") , label = "Formula Name", value = "" , 
-                       width = '100%' ,
-                       placeholder = formulaNamePlaceHolderText )
+              textInput( ns("formulaName") , 
+                         "Formula Name", value = "" , 
+                         width = '100%' ,
+                         placeholder = formulaNamePlaceHolderText )
         ) ,
         
         column( 3 , 
-              actionButton( ns("updateFormulas") , "Update Formulas" ,
+              actionButton( ns("updateFormulas") , 
+                            "Update Formulas" ,
                             style='margin-top:25px' )  
         )
       ) ,
     
     fluidRow(  
       column( 12 , 
-        textInput( ns("formulaText") , label = "Formula", value = "" , 
+        textInput( ns("formulaText") , 
+                   "Formula", value = "" , 
                    width = '100%' ,
                    placeholder = formulaPlaceHolderText ) ,
         
@@ -67,9 +73,9 @@ malaria_data_formulas_UI <- function( id ) {
     
     tabsetPanel( type = "tabs", 
  
-                tabPanel( "Build/edit Formulas" ,
+                tabPanel( h3( "Build/edit Formulas" ) ,
                           
-                          h3( "Select Malaria-relevant Data Elements" , width = '50%') ,
+                          h3( "Select Malaria-relevant Data Elements by Clicking on a Row (below)" , width = '50%') ,
                           
                           checkboxInput( ns('showCategoryOptions') , 
                                 "List category option as a separate line" ,
@@ -79,11 +85,12 @@ malaria_data_formulas_UI <- function( id ) {
     
                 ) ,
                 
-                tabPanel( "Data" ,
+                tabPanel( h3( "Data" ) ,
                           
                           fluidRow( 
                            column( 3 ,
-                                   selectInput( ns("period") , "Period:", selected = "LAST_YEAR" , 
+                                   selectInput( ns("period") , "Period:", 
+                                                selected = "LAST_YEAR" , 
                                                 choices = periods ) 
                                    ) ,
                            column( 3 ,
@@ -105,7 +112,7 @@ malaria_data_formulas_UI <- function( id ) {
                          ), 
                          
                 tabsetPanel( 
-                tabPanel("Request formula data",
+                tabPanel( h3( "Request formula data" ) ,
                                    
                         fluidRow(
                            
@@ -117,14 +124,14 @@ malaria_data_formulas_UI <- function( id ) {
                           
                            column( 8, 
                             
-                                   textOutput( ns('apiUrl') ) ,
+                                   # textOutput( ns('apiUrl') ) ,
                                    DTOutput( ns('formulaData') ) ,
                                    plotOutput( ns('download') ) 
                                    )
                          )
                 ) ,
 
-                tabPanel("Summary Dataset",
+                tabPanel( h3("Summary Dataset") ,
 
                          DTOutput( ns('formulaDataset') ) 
 
@@ -137,7 +144,7 @@ malaria_data_formulas_UI <- function( id ) {
 # Server function ####
 malaria_data_formulas <- function( input, output, session , 
                                    malariaDataElements , 
-                                   orgUnits, 
+                                   org_Units, 
                                    login_baseurl  ){
   # imported reactives ####
   login = reactive({ login_baseurl$login() })
@@ -151,7 +158,20 @@ malaria_data_formulas <- function( input, output, session ,
   mds = reactive({ malariaDataElements$malariaDataSets() }) 
   
   # organizational unit levels
-  ous = reactive({ orgUnits$orgUnits() }) 
+  ous = reactive({ org_Units$orgUnits() }) 
+  ousLevels = reactive({ org_Units$orgUnitLevels() })
+  
+  observe({
+    
+    l =  ousLevels()  %>% as_tibble() %>% 
+      count(., level , levelName) %>%
+      pull( levelName )
+
+    updateSelectInput(  session, 'orgUnits' ,
+                       choices =  c(l , 'Leaf' , 'All levels') , 
+                       selected = head( l , 1 )
+    )
+                })
   
   # Initialize Formula Table
   formula_table = reactiveVal( tibble( Formula.Name = "" , Formula = "" ) )
@@ -373,15 +393,29 @@ malaria_data_formulas <- function( input, output, session ,
     
     print( paste( 'period is ', periods. ) )
     periods_vector = str_split( periods. , ";" ) %>% unlist
+    
     n_periods = length( periods_vector )
     print( paste( 'n_periods' , n_periods ))
     
+    # translate level name to LEVEL-1, etc
+    level = ousLevels() %>% filter( levelName %in% orgUnits.) %>% pull( level )
+    ouLevel = paste0( "LEVEL-", level )
+    print( paste( level, ouLevel) )
+    
     data = list( n_periods )
     
-    for ( i in 1:n_periods ){
-      
-      data[[i]] = fetch_get( baseurl. , de. , periods_vector[i] , orgUnits. , aggregationType. )
-    }
+    withProgress(message =  'Requests are being made for Sums and Counts\n',
+                 detail = aggregationType. , 
+                 value = 0 , {
+                   
+      for ( i in 1:n_periods ){
+        
+        data[[i]] = fetch_get( baseurl. , de. , periods_vector[i] , ouLevel , aggregationType. )
+        
+        incProgress(1/ n_periods )
+        
+        }
+      })
     
     return( bind_rows( data ) )
   }
@@ -393,12 +427,14 @@ malaria_data_formulas <- function( input, output, session ,
     # fetch = retry( get( url , .print = TRUE )[[1]] ) # if time-out or other error, will retry 
     fetch = get( url , .print = TRUE )
     
-    print( paste( 'fetch class' , class( fetch ) ) )
-    print( paste( 'fetch class[[1]]' , class( fetch[[1]] ) ) ) 
+    # print( paste( 'fetch class' , class( fetch ) ) )
+    # print( paste( 'fetch class[[1]]' , class( fetch[[1]] ) ) ) 
+    
     fetch = fetch[[1]] 
     
     # if returns a data frame of values (e.g. not 'server error'), then keep
-    print( paste( 'did fetch return data frame?' , is.data.frame( fetch )))
+    # print( paste( 'did fetch return data frame?' , is.data.frame( fetch )))
+    
     if ( is.data.frame( fetch ) ){ 
       
     # remove unneeded cols
@@ -407,11 +443,11 @@ malaria_data_formulas <- function( input, output, session ,
       
       unneeded.cols = which( cols %in% c( 'storedBy', 'created', 'lastUpdated', 'comment' ))
     
-      print( glimpse( fetch )  )
+      # print( glimpse( fetch )  )
       
-      print( paste( 'unneeded cols' , 
-                    paste( unneeded.cols , collapse = "," ))
-      )
+      # print( paste( 'unneeded cols' , 
+      #               paste( unneeded.cols , collapse = "," ))
+      # )
       
       data.return = fetch %>% select( -unneeded.cols ) %>% as_tibble()
       
@@ -422,7 +458,7 @@ malaria_data_formulas <- function( input, output, session ,
       
       } else {
       
-      print( fetch )
+      print( paste( nrow( fetch ) , 'records\n' ) )
       
       de.cat = str_split( de. , fixed(".")) %>% unlist  
       

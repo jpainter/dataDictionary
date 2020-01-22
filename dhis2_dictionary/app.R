@@ -141,6 +141,19 @@ ui <- dashboardPage(
     padding: 8px 10px !important;
   }
 ")) ,
+  
+  # TAB header styled, https://github.com/rstudio/shiny/issues/1906
+  tags$head( 
+    tags$style(type = 'text/css', 
+               '.navbar { background-color: red;}',
+               '.navbar-default .navbar-brand{color: white;}',
+               '.tab-panel{ background-color: red; color: white}',
+               '.nav navbar-nav li.active:hover a, .nav navbar-nav li.active a {
+                        background-color: green ;
+                        border-color: green;
+                        }'
+               
+    )) ,
     
     tabItems(
       
@@ -249,12 +262,12 @@ server <-  function(input, output, session){
   # Load modules ####
   
    login_baseurl = callModule( login_info , "login" , 
-                               orgUnits = orgUnits ,
+                               org_Units = org_Units ,
                                data_elements = data_dictionary , 
                                malariaDataElements = malaria_data_elements
                                )
    
-   orgUnits = callModule( org_units , "ou" , login_baseurl = login_baseurl )
+   org_Units = callModule( org_units , "ou" , login_baseurl = login_baseurl )
 
    data_dictionary = callModule( data_elements , "de" , login_baseurl = login_baseurl )
    
@@ -264,13 +277,13 @@ server <-  function(input, output, session){
    
    malaria_data_formulas = callModule( malaria_data_formulas , "formulas" ,
                                       malariaDataElements = malaria_data_elements ,
-                                      orgUnits = orgUnits ,  
+                                      org_Units = org_Units ,  
                                       login_baseurl = login_baseurl ) 
    
    dataQuality = callModule( dataQuality , "dq" ,
-                                      malariaDataElements = malaria_data_elements ,
-                                      orgUnits = orgUnits ,  
-                                      login_baseurl = login_baseurl )
+                             malariaDataElements = malaria_data_elements ,
+                             org_Units = org_Units ,
+                             login_baseurl = login_baseurl )
    
 }
 

@@ -58,12 +58,12 @@ get = function( source_url , .print = TRUE , json = TRUE , ...){
   
   from_url =  GET( source_url ) 
   
-  print( 'GET completed')
-  print( from_url )
+  # print( 'GET completed')
+  # print( from_url )
   
   get_content = content( from_url , "text")
   
-  print( 'get_content')
+  # print( 'get_content')
   
   if ( from_url$status_code != 200 ){
     # showModal( modalDialog( get_content[[1]] ) )
