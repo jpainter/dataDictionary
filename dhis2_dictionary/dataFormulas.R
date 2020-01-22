@@ -6,7 +6,7 @@ source( "API.r")
 formulaNamePlaceHolderText = "Choose a name for the formula, like 'total confirmed cases'"  
 formulaPlaceHolderText = "Select dataElements below. Each will be added with a plus sign.  You may edit, using any mathematical operator (+,-,*,/) and parentheses."  
 
-periods = scan( text = "months_last_3_years, months_last_5_years, 
+periods = scan( text = "months_last_year, months_last_3_years, months_last_5_years, 
                  THIS_MONTH, LAST_MONTH, THIS_BIMONTH, LAST_BIMONTH, THIS_QUARTER, LAST_QUARTER,
                  THIS_SIX_MONTH, LAST_SIX_MONTH, MONTHS_THIS_YEAR, QUARTERS_THIS_YEAR,
                  THIS_YEAR, MONTHS_LAST_YEAR, QUARTERS_LAST_YEAR, LAST_YEAR, LAST_5_YEARS, LAST_12_MONTHS,
@@ -73,19 +73,31 @@ malaria_data_formulas_UI <- function( id ) {
     
     tabsetPanel( type = "tabs", 
  
-                tabPanel( h3( "Build/edit Formulas" ) ,
+                tabPanel( h3( "Build/edit Formulas by selecting elements    " ) ,
                           
-                          h3( "Select Malaria-relevant Data Elements by Clicking on a Row (below)" , width = '50%') ,
+                          h3( "Add to the formula by clicking on a Row (below)" , width = '50%') ,
                           
                           checkboxInput( ns('showCategoryOptions') , 
-                                "List category option as a separate line" ,
+                                "List each category option as a separate line" ,
                                 value = TRUE ) ,
 
                           DTOutput( ns('malariaDataElements') )
     
                 ) ,
                 
-                tabPanel( h3( "Data" ) ,
+                tabPanel( h3('Details of elements in formula') ,
+                          fluidRow(
+                            
+                            column( 12 ,
+                                    textOutput( ns('n_FormulaElements') ) ,
+                                    tags$br() , 
+                                    DTOutput( ns('formulaElements') )
+                            ) 
+                            
+                          )
+                          ),
+                
+                tabPanel( h3( "    Request Data" ) ,
                           
                           fluidRow( 
                            column( 3 ,
@@ -108,37 +120,27 @@ malaria_data_formulas_UI <- function( id ) {
                                    HTML('&emsp;') ,
                                   
                                    downloadButton( ns('downloadFormulaData') , 'Download Formula and Data')
-                          )   
-                         ), 
-                         
-                tabsetPanel( 
-                tabPanel( h3( "Request formula data" ) ,
-                                   
-                        fluidRow(
-                           
-                           column( 4,
-                                   textOutput( ns('n_FormulaElements') ) ,
-                                   tags$br() , 
-                                   DTOutput( ns('formulaElements') )
-                           ) ,
+                          )
+                          ),
                           
-                           column( 8, 
+                          fluidRow(
+
+                            column( 6, 
+                                    
+                                    # textOutput( ns('apiUrl') ) ,
+                                    textOutput( ns('limitDisplay') ) ,
+                                    DTOutput( ns('formulaData') ) ,
+                                    # plotOutput( ns('download') ) 
+                            ) ,
                             
-                                   # textOutput( ns('apiUrl') ) ,
-                                   DTOutput( ns('formulaData') ) ,
-                                   plotOutput( ns('download') ) 
-                                   )
-                         )
-                ) ,
+                            column( 6, 
+                                    textOutput( ns('limitSummaryTableMessage') ) ,
+                                    DTOutput( ns('formulaSummaryDataset') ) 
+                            )
+                          )
+                         ) 
 
-                tabPanel( h3("Summary Dataset") ,
-
-                         DTOutput( ns('formulaDataset') ) 
-
-                )
-                ) )
     )
-                
 )}
 
 # Server function ####
@@ -186,10 +188,12 @@ malaria_data_formulas <- function( input, output, session ,
     inFile$datapath
   })
   
-  uploaded_formulas = reactive({ read.xlsx( data_formula_file() ,  "Formula" ) })
+  uploaded_formulas = reactive({ read.xlsx( data_formula_file() ,  
+                                            "Formula" ) 
+    })
   
   # Display formula table ####
-  output$contents <- renderDT({
+  output$contents <- DT::renderDT({
     
     formula_table()
     
@@ -260,7 +264,7 @@ malaria_data_formulas <- function( input, output, session ,
   
  
   # Display table of malaria data elements ####
-  output$malariaDataElements = renderDT( 
+  output$malariaDataElements = DT::renderDT( 
     
     if ( input$showCategoryOptions ){
       mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
@@ -374,7 +378,7 @@ malaria_data_formulas <- function( input, output, session ,
   })
   
   # display data elements used in formula ####
-  output$formulaElements = renderDT( 
+  output$formulaElements = DT::renderDT( 
     
     formulaElements() %>% 
       select( -dataElement.id , -displayName , everything() ) , 
@@ -522,6 +526,8 @@ malaria_data_formulas <- function( input, output, session ,
     
     # Periods
     periods = input$period 
+
+    if ( periods %in% 'months_last_year' ) periods = date_code( YrsPrevious = 1 )
     if ( periods %in% 'months_last_3_years' ) periods = date_code( YrsPrevious = 3 )
     if ( periods %in% 'months_last_5_years' ) periods = date_code( YrsPrevious = 5 )
     print( paste( 'Periods requested are' , periods ) )
@@ -564,6 +570,8 @@ malaria_data_formulas <- function( input, output, session ,
   # display requested formula data ####
   
   formulaData = reactive({
+    req( dd() )
+    
          if ( resetData$clearTable ){ 
            return() 
            } else {
@@ -571,16 +579,56 @@ malaria_data_formulas <- function( input, output, session ,
              } 
    })
   
-  output$formulaData = renderDT( 
+  output$formulaData = DT::renderDT( 
     
-    formulaData() , 
+      head( formulaData() , 10000 )
+    ,
     
     rownames = FALSE , 
-    filter = 'top' ,
+    # filter = 'top' ,
     server = TRUE, escape = FALSE, 
     selection = list( mode='single' )   ,
     options = DToptions_no_buttons()
     )
+  
+  # Message when > 10000 records
+  
+  limitDisplayMessage = reactive({ 
+    req( dd() )
+    
+    print( paste( 'nrow(dd())' , nrow(dd()))) 
+    
+    if ( nrow( dd() ) > 10000 ){ 
+      return( paste( 'Table limited to first 10,000 of' ,
+                     nrow( dd() ) ,
+                     'records')
+      )
+    } else (
+      return("")
+    )
+    })
+  
+  output$limitDisplay = renderText({ h4( limitDisplayMessage() ) })
+   
+  limitSummaryTableMessage = reactive({ 
+    req( formulaSummaryDataset() )
+    
+    print( paste( 'nrow(formulaSummaryDataset)' , nrow(formulaSummaryDataset())) )
+    
+    if ( nrow( formulaSummaryDataset() ) > 10000 ){ 
+      return( paste( 'Table limited to first 10,000 of' ,
+                     nrow( formulaSummaryDataset() ) ,
+                     'records')
+      )
+    } else (
+      return("")
+    )
+  })
+  
+  output$limitSummaryTableMessage = renderText({ h4( limitSummaryTableMessage() ) })
+  
+
+  
   
   # empty table if formula elements change ####
    
@@ -658,8 +706,8 @@ malaria_data_formulas <- function( input, output, session ,
 
     # print( 'this is d....\n' )
     # 
-    # print( head(d) )
-    # print( colnames(d)  )
+    print( paste( 'head(d)' , head(d) ) )
+    print( paste( 'colnames d' , colnames(d)  ) )
  
       # Combine dataset for sum and counts 
       dataset_sum = d %>%
@@ -675,6 +723,8 @@ malaria_data_formulas <- function( input, output, session ,
       max.fe = paste("max(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
       # any.fe = paste("any(c(" , str_replace_all( formula_expression , fixed("+") , "," ) , "))" )
       
+      print( paste( 'colnames dataset_sum' , colnames(dataset_sum)  ) )
+      
       dataset_count = d %>%
         select( - SUM ) %>%
         pivot_wider(
@@ -686,7 +736,8 @@ malaria_data_formulas <- function( input, output, session ,
                    # , any.Count = eval( parse( text  = any.fe ) )
         )
       
-  
+      print( paste( 'colnames dataset_count' , colnames(dataset_count)  ) )
+      
       dataset = inner_join( dataset_sum , 
                             dataset_count ,
                             by = c("levelName", "orgUnitName", "period")
@@ -701,15 +752,19 @@ malaria_data_formulas <- function( input, output, session ,
   
   output$formulaExpression = renderText( formula_expression() )
   
-  output$formulaDataset = DT::renderDT(
+  output$formulaSummaryDataset = DT::renderDT(
 
-    formulaSummaryDataset()  ,
+    head( formulaSummaryDataset() , 1000 ) ,
 
-    selection = list( mode='single' ) ,
+    rownames = FALSE , 
+    # filter = 'top' ,
+    server = TRUE, escape = FALSE, 
+    selection = list( mode='single' )   ,
     options = DToptions_no_buttons()
   )
   
-  # Download formula data and dataset ####
+
+  # download data button
   output$downloadFormulaData <- downloadHandler(
     
     
