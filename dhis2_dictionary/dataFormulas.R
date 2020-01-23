@@ -554,7 +554,11 @@ malaria_data_formulas <- function( input, output, session ,
                      by = c("dataElement", "dataElement.id", "Categories" , "categoryOptionCombo.ids", "period", "orgUnit", "orgUnitName" ,  "level" , "levelName")
                      )  %>%
           select( dataElement, Categories , orgUnitName, levelName , period,  COUNT , SUM , dataElement.id, categoryOptionCombo.ids , orgUnit, level ) %>%
-          arrange( dataElement , Categories , desc( period ) , level )
+          arrange( dataElement , Categories , desc( period ) , level ) %>%
+          mutate( 
+            SUM = as.numeric( SUM )  ,
+            COUNT = as.numeric( COUNT )
+            )
         
       } else{ 
         
@@ -745,7 +749,7 @@ malaria_data_formulas <- function( input, output, session ,
       
       dataset = inner_join( dataset_sum , 
                             dataset_count ,
-                            by = c("levelName", "orgUnitName", "period")
+                            by = c("levelName", "orgUnitName", "orgUnit" , "period")
       ) 
 
       return( dataset )
