@@ -254,6 +254,9 @@ tabItem(tabName = 'contact',
 # Define server logic #####
 server <-  function(input, output, session){
    
+  # Increase maximum upload file size 
+  options(shiny.maxRequestSize=100*1024^2) 
+  
   # stop shiny when browser closes
   session$onSessionEnded(function() {
     stopApp()

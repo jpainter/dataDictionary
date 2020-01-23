@@ -43,6 +43,14 @@ orgUnits_UI <- function( id ) {
                          style = "overflow-x: scroll;"
                          
                          ) ,
+                 
+                tabPanel("Duplicates", 
+                         
+                         DTOutput( ns( 'duplicateOrgUnit_table' )  ) ,
+                         
+                         style = "overflow-x: scroll;"
+                         
+                         ) ,
                 
                 tabPanel("geoFeatures", 
                          
@@ -95,6 +103,21 @@ org_units <- function( input, output, session , login_baseurl) {
       return( ous )
 
     } else { "Unable to login to server" }
+  })
+  
+  orgUnitDuplicates = reactive({
+    
+    duplicates = orgUnits() %>%
+      group_by( name ) %>%
+      summarise( n = n() ) %>%
+      filter( n > 1 )
+    
+    orgUnitDuplicates = inner_join( orgUnits() ,
+                                     duplicates ,
+                                     by = 'name' )
+    
+    return( orgUnitDuplicates )
+    
   })
   
   n_orgUnits_level = reactive({ 
@@ -327,7 +350,7 @@ org_units <- function( input, output, session , login_baseurl) {
 
 # output tables ####  
 
-  output$orgUnit_levels = renderDT(
+  output$orgUnit_levels = DT::renderDT(
     
     orgUnitLevels_with_counts()  , 
     
@@ -339,9 +362,20 @@ org_units <- function( input, output, session , login_baseurl) {
       DToptions_with_buttons( file_name = paste( instance() , '_OrgUnitLevels_' , "_" , Sys.Date() ) )
   )
   
-  output$orgUnit_table = renderDT(
+  output$orgUnit_table = DT::renderDT(
 
     orgUnits()   , 
+    
+    rownames = FALSE, 
+    extensions = 'Buttons' , 
+    options = 
+      DToptions_with_buttons( file_name = paste( instance() , '_OrgUnits_' , Sys.Date() ) )
+
+    )
+  
+  output$duplicateOrgUnit_table = DT::renderDT(
+
+    orgUnitDuplicates()   , 
     
     rownames = FALSE, 
     extensions = 'Buttons' , 

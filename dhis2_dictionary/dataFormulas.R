@@ -712,25 +712,15 @@ malaria_data_formulas <- function( input, output, session ,
 
     # print( 'this is d....\n' )
     # 
-    print( paste( 'colnames(d)' , colnames(d) ) )
     print( paste( 'nrow(d)' , nrow(d) ) )
-    # count( d, box )
-    # count( d, period )
-    # count( d , orgUnitName )
-    # count( d , period , levelName )
 
       # Combine dataset for sum and counts 
-      ds = d %>%
+      dataset_sum = d %>%
         select( - COUNT ) %>%
         pivot_wider(
           names_from = box,
           values_from = SUM ) %>%
-        group_by( levelName , orgUnitName, period  ) 
-      
-      print( paste( 'colnames(ds)' , colnames(ds) ) )
-      print( paste( 'nrow(ds)' , nrow(ds) ) )
-      
-      dataset_sum = ds %>%
+        group_by( levelName, orgUnitName, orgUnit, period  )  %>%
         summarise( sum = eval( parse( text  = formula_expression() ) ) )
       
       # count expressions...
@@ -738,14 +728,14 @@ malaria_data_formulas <- function( input, output, session ,
       max.fe = paste("max(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
       # any.fe = paste("any(c(" , str_replace_all( formula_expression , fixed("+") , "," ) , "))" )
       
-      print( paste( 'colnames dataset_sum' , colnames(dataset_sum)  ) )
+      # print( paste( 'colnames dataset_sum' , colnames(dataset_sum)  ) )
       
       dataset_count = d %>%
         select( - SUM ) %>%
         pivot_wider(
           names_from = box,
           values_from = COUNT ) %>%
-        group_by( levelName , orgUnitName, period  ) %>%
+        group_by( levelName, orgUnitName, orgUnit, period  ) %>%
         summarise( Count.min = eval( parse( text  = min.fe ) ) ,
                    Count.max = eval( parse( text  = max.fe ) )
                    # , any.Count = eval( parse( text  = any.fe ) )

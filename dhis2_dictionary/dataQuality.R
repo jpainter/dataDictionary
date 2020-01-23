@@ -106,14 +106,32 @@ dataQuality <- function( input, output, session ,
     })
   
   # Display formula table ####
-  output$uploadedData <- renderDT({
+  output$uploadedData = DT::renderDT(
     
-    req( input$selectDataName )
+    # req( input$selectDataName )
     
-    uploaded_data() %>% 
-      filter(  dataName %in% input$selectDataName )
+    uploaded_data() %>% filter(  dataName %in% input$selectDataName ) ,
     
-  })
+    rownames = FALSE , 
+    # filter = 'top' ,
+    server = TRUE, 
+    escape = FALSE , 
+    selection = list( mode='single' )   ,
+    options = DToptions_no_buttons()
+    
+  )
+  
+  output$formulaSummaryDataset = DT::renderDT(
+    
+    head( formulaSummaryDataset() , 10000 ) ,
+    
+    rownames = FALSE , 
+    # filter = 'top' ,
+    server = TRUE, escape = FALSE, 
+    selection = list( mode='single' )   ,
+    options = DToptions_no_buttons()
+  )
+  
   
 
   # update select formula edit pulldown list ####
