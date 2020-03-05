@@ -323,6 +323,9 @@ malaria_data_formulas <- function( input, output, session ,
     
     ft = input$formulaText
     
+    print( 'formulaElements ...')
+    print( ft )
+    
     if ( nchar( ft ) == 0 ) return( mde() %>% filter( FALSE ) )
     
     # Parse elements separated by mathematical operator between ] and [
@@ -351,12 +354,19 @@ malaria_data_formulas <- function( input, output, session ,
         
       ) %>% select( dataElement , Categories ) %>% unique
     
+    print( 'formula parts ... ')
+    print( formulaParts )
+    
     mde =  mde()  %>% 
       separate_rows( Categories , categoryOptionCombo.ids, sep = ";" ) %>%
       mutate( Categories = Categories %>% str_trim  ,
               categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )
-    
-    print( formulaParts )
+    # 
+    # print( 'mde() ... ')
+    # print( mde() )
+    # 
+    print( 'mde ... ')
+    print( mde )
     
     # Filter MDE to formula elements:
     tableOfFormulaElements = 
@@ -372,6 +382,9 @@ malaria_data_formulas <- function( input, output, session ,
       ) %>%
       unique() %>%
        arrange( dataElement , Categories )
+    
+    print( 'table of formula elements' )
+    print( tableOfFormulaElements )
     
     return( tableOfFormulaElements )
     
@@ -554,11 +567,7 @@ malaria_data_formulas <- function( input, output, session ,
                      by = c("dataElement", "dataElement.id", "Categories" , "categoryOptionCombo.ids", "period", "orgUnit", "orgUnitName" ,  "level" , "levelName")
                      )  %>%
           select( dataElement, Categories , orgUnitName, levelName , period,  COUNT , SUM , dataElement.id, categoryOptionCombo.ids , orgUnit, level ) %>%
-          arrange( dataElement , Categories , desc( period ) , level ) %>%
-          mutate( 
-            SUM = as.numeric( SUM )  ,
-            COUNT = as.numeric( COUNT )
-            )
+          arrange( dataElement , Categories , desc( period ) , level )
         
       } else{ 
         
@@ -672,8 +681,9 @@ malaria_data_formulas <- function( input, output, session ,
   
   formula_expression = reactive({
     
-    # req( input$formulaText )
+    req( input$formulaText )
 
+    print( 'input formula text ... ')
     print( input$formulaText )
     print( nrow( formulaElements() ) )
     
@@ -684,6 +694,7 @@ malaria_data_formulas <- function( input, output, session ,
                            translate_to = id ,
                            brackets = FALSE )
     
+    print( 'translate formula .../n')
     print( f )
 
     return( f )
@@ -749,7 +760,7 @@ malaria_data_formulas <- function( input, output, session ,
       
       dataset = inner_join( dataset_sum , 
                             dataset_count ,
-                            by = c("levelName", "orgUnitName", "orgUnit" , "period")
+                            by = c("levelName", "orgUnitName", "period")
       ) 
 
       return( dataset )

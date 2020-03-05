@@ -86,10 +86,14 @@ org_units <- function( input, output, session , login_baseurl) {
       # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
       # if available, use resources method
       
-      cols = c( 'level' , 'name', 'id', 'shortName' , 'displayName', 'displayShortName', "openingDate" , "leaf" , "parent" )
+      cols = c( 'level' , 'name', 'id', 'shortName' , 'displayName', 'displayShortName', 
+                "openingDate" , "leaf" , "parent" ,
+                'path' )
+      
+      # print( paste( 'cols:' , cols ) )
 
       url <- paste0( baseurl() ,"api/organisationUnits.json?fields=" ,
-                     paste(cols, collapse = ",") , 
+                     paste( cols, collapse = ",") , 
                      "&paging=false")
       
       ous =  get( url )[[1]] %>% 
@@ -97,6 +101,9 @@ org_units <- function( input, output, session , login_baseurl) {
         left_join( orgUnitLevels() %>% select( level, levelName ) , by = 'level' ) %>%
         select( level, levelName , everything() ) %>%
         arrange( level )
+      
+      
+      # print( paste( 'col names:' , names( ous ) ) )
 
       removeModal()
 
@@ -198,7 +205,7 @@ org_units <- function( input, output, session , login_baseurl) {
     
     if (  login() ){
 
-      showModal(modalDialog("Downloading list of organisation units", footer=NULL))
+      showModal(modalDialog("Gathering geoFeatures", footer=NULL))
 
       # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
       # if available, use resources method
@@ -206,8 +213,9 @@ org_units <- function( input, output, session , login_baseurl) {
       cols = c( 'level' , 'name', 'id', 'shortName' , 'displayName', 'displayShortName', "openingDate" , "leaf" , "parent" ,
                 'geometry' )
 
-      url <- paste0( baseurl() ,"api/organisationUnits.json?fields=" ,
-                     paste(cols, collapse = ",") , 
+      url <- paste0( baseurl() ,"api/organisationUnits.json" ,
+                     "?fields=:all" ,
+                     # paste(cols, collapse = ",") , 
                      "&paging=false")
       
       ous = GET( url ) %>% content(. , "text")
@@ -218,9 +226,10 @@ org_units <- function( input, output, session , login_baseurl) {
       #   select( level, levelName , everything() ) %>%
       #   arrange( level ) 
       
-      print( glimpse( ous ) )
+      print('geoFeatures')
+      print( names( ous ) )
       
-      ous.sf = ous %>% read_sf()
+      # ous.sf = ous %>% read_sf()
 
       removeModal()
 
@@ -257,6 +266,17 @@ org_units <- function( input, output, session , login_baseurl) {
   
   ous_geoFeatures = reactive({
     
+    print( 'ous_geoFeatures' )
+
+    meta = list( organisationUnits =  geoFeatures() ,
+                 organisationUnitLevels = orgUnitLevels() )
+
+    print( 'ous_from_metatdata' )
+    
+    ogf = ous_from_metatdata( .meta = meta ,
+                              simplify = TRUE , simplify.keep = .02 ,
+                              SF = TRUE )
+
     # ogf = ous_from_geoFeatures( geoFeatures = geoFeatures(),
     #                                        orgUnits = orgUnits() , 
     #                                        open.only = FALSE , # limit to clinics currently open, only,
@@ -265,21 +285,30 @@ org_units <- function( input, output, session , login_baseurl) {
     #                                        simplify = TRUE ,
     #                                        simplify.keep = .015 , # larger numbers yield less detail
     #                                         )
-    # return( ogf )
+    return( ogf )
   })
+  
+  admins = reactive({ ous_geoFeatures() %>% filter( feature %in% 'Polygon' ) })
   
   # geoFeatures MAP ####
   output$geoFeatures_map = renderLeaflet({
     
-    # polygons =  ous_geoFeatures() %>% filter( ty %in% 2 )
-    # 
-    # # points =  geoFeatures() %>% filter( ty %in% 1 )
-    # 
-    # tm <- tm_shape()
-    # 
-    #   + tm_polygons( 'polygons', legend.title = "Administrative Areas")
-    # 
-    # tmap_leaflet(tm)
+    admins = ous_geoFeatures() %>% filter( feature %in% 'Polygon' )
+    regions = filter( admins , level == 2 )
+    districts = filter( admins , level == 3 )
+
+    hf = ous_geoFeatures() %>% filter( feature %in% 'Point' )
+    
+    tm = tm_shape( regions , projection="+proj=robin" ) + 
+      tm_polygons(  ) +
+      tm_borders("white", lwd = .5) +
+      tm_text("orgUnit.name", size = "AREA") +
+      
+      tm_shape( districts , projection="+proj=robin" ) + 
+      tm_polygons(  ) +
+      tm_text("orgUnit.name", size = "AREA") 
+    
+    tmap_leaflet( tm )
   })
 
   # geoFetures Map ####
@@ -288,7 +317,6 @@ org_units <- function( input, output, session , login_baseurl) {
   # md = geoFeatures() %>% filter( level == 2 )
   
   # map.district = ous_from_metatdata( .meta = md , simplify = FALSE , SF = TRUE ) 
-  
   
   # output$geoFeatures_map = leaflet(width=900, height=650) %>%
   #   

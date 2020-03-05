@@ -51,6 +51,11 @@ retry <- function( expr, isError=function(x) "try-error" %in% class(x),
 ## gets json text from url and converts to data frame 
 get = function( source_url , .print = TRUE , json = TRUE , ...){
   
+  # Login if credentials provided
+  if ( exists( 'baseurl' ) ){
+    if ( !loginDHIS2( baseurl, username, password) ) return('no connection')
+  }
+    
   # https://stackoverflow.com/questions/57198836
   httr::set_config(httr::config(ssl_verifypeer=0L))
   
