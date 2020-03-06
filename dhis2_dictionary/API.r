@@ -6,7 +6,7 @@ loginDHIS2<-function( baseurl, username, password) {
   
   url<-paste0( baseurl, "api/me" )
   
-  r <-  GET( url, authenticate(username, password) ) 
+  r <-  GET( url, authenticate( username, password) ) 
   
   assert_that( r$status_code == 200L ) 
 }

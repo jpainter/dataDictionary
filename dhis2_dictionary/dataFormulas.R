@@ -99,18 +99,21 @@ malaria_data_formulas_UI <- function( id ) {
                 
                 tabPanel( h3( "    Request Data" ) ,
                           
-                          fluidRow( 
+                      fluidRow( 
                            column( 3 ,
                                    selectInput( ns("period") , "Period:", 
                                                 selected = "LAST_YEAR" , 
                                                 choices = periods ) 
                                    ) ,
+                           
+                           
                            column( 3 ,
  
                                    selectInput( ns("orgUnits") , "Organization Unit Level:", 
                                                 selected = "LEVEL-1" , 
                                                 choices = levels ) 
                            ) ,
+                           
                           column( 6 ,
                                   
                                   tags$br() ,
@@ -122,18 +125,30 @@ malaria_data_formulas_UI <- function( id ) {
                                    downloadButton( ns('downloadFormulaData') , 'Download Formula and Data')
                           )
                           ),
+                      
+                      fluidRow( 
+                             column( 6, 
+                                    hr() , 
+                                    h4( 'Values of of each individual data element:' ) ,
+                             ) ,
+                             column( 6, 
+                                                                        
+                                    hr() ,
+                                    h4( 'Values of Formula with Counts of Data Elements Available:' ) ,
+                             ) 
+                             ), 
                           
-                          fluidRow(
+                       fluidRow(
 
                             column( 6, 
-                                    
-                                    # textOutput( ns('apiUrl') ) ,
+                        
                                     textOutput( ns('limitDisplay') ) ,
                                     DTOutput( ns('formulaData') ) ,
                                     # plotOutput( ns('download') ) 
                             ) ,
                             
                             column( 6, 
+
                                     textOutput( ns('limitSummaryTableMessage') ) ,
                                     DTOutput( ns('formulaSummaryDataset') ) 
                             )
@@ -603,7 +618,18 @@ malaria_data_formulas <- function( input, output, session ,
     # filter = 'top' ,
     server = TRUE, escape = FALSE, 
     selection = list( mode='single' )   ,
-    options = DToptions_no_buttons()
+    options = 
+      list( autoWidth = FALSE , 
+        scrollX = TRUE ,
+        dom = 'l<"col-sm-6"i>fprt' ,
+        # scrollX = TRUE  ,
+        lengthMenu = list( c( -1, 1, 5, 10, 25, -1), list( 'All' , '1', '5' , '10', '25') ) ,
+        columnDefs = list( list(className = 'dt-right', targets="_all" ) ) ,
+        rownames = FALSE , 
+        server = TRUE , 
+        escape = FALSE , 
+        selection = list( mode='single' ) 
+  )
     )
   
   # Message when > 10000 records
@@ -760,7 +786,7 @@ malaria_data_formulas <- function( input, output, session ,
       
       dataset = inner_join( dataset_sum , 
                             dataset_count ,
-                            by = c("levelName", "orgUnitName", "period")
+                            by = c("levelName", "orgUnit" , "orgUnitName", "period")
       ) 
 
       return( dataset )
@@ -779,8 +805,20 @@ malaria_data_formulas <- function( input, output, session ,
     rownames = FALSE , 
     # filter = 'top' ,
     server = TRUE, escape = FALSE, 
-    selection = list( mode='single' )   ,
-    options = DToptions_no_buttons()
+    selection = 
+      list( mode='single' )   ,
+        options = 
+       list( autoWidth = FALSE , 
+        scrollX = TRUE ,
+        dom = 'l<"col-sm-6"i>fprt' ,
+        # scrollX = TRUE  ,
+        lengthMenu = list( c( -1, 1, 5, 10, 25, -1), list( 'All' , '1', '5' , '10', '25') ) ,
+        columnDefs = list( list(className = 'dt-right', targets="_all" ) ) ,
+        rownames = FALSE , 
+        server = TRUE , 
+        escape = FALSE , 
+        selection = list( mode='single' ) 
+  )
   )
   
 

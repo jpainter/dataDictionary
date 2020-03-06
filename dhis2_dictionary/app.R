@@ -38,6 +38,7 @@
 
 
 # Load libraries ####
+library( data.table )
 library( shiny )
 library( shinyjs )
 library( shinydashboard )
@@ -45,6 +46,7 @@ library( shinyBS )
 library( shinyLP )
 library( tmap )
 library( leaflet )
+library( mapview )
 library( RColorBrewer )
 library( plotly )
 library( tidyverse )

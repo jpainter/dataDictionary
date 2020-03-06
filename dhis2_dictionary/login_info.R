@@ -21,7 +21,7 @@ login_info_UI <- function( id ) {
                            
                            passwordInput( ns("password") , label = "Password:", NULL ), # "district"
                            
-                           textOutput( ns("Status") ) ,
+                           h3( textOutput( ns("Status") ) ) ,
                            
                            actionButton( ns("loginButton"), "Request Metadata" , style='margin-top:25px' ) ,
                            
@@ -35,7 +35,12 @@ login_info_UI <- function( id ) {
                                     
                            fileInput( ns('instancesFile'), 'Optional list of credentials (.xlsx)', 
                                        accept = c(".xlsx", "xls") 
-                                       )
+                                       ) 
+                           
+                           # TODO 
+                           # , fileInput( ns('metaDataFile'), 'Restore Previously Downloaded System Info(.xlsx)', 
+                           #             accept = c(".xlsx", "xls") 
+                           #             )
                          ) , 
                          
                          br() , br() ,
@@ -50,7 +55,7 @@ login_info_UI <- function( id ) {
                          
                          fluidRow(
                            column( 6, tableOutput( ns('systemInfo') ) ) , 
-                           column( 6 , DTOutput( ns('variables') ) )
+                           column( 6 , tableOutput( ns('variables') ) )
                            )
                          
                          ) ,
@@ -190,6 +195,20 @@ login_info <- function( input, output, session,
     strsplit( input$baseurl, suffix.part)[[1]][1]
     
   })
+  
+  # TODO : Restore previously downloaded metadata
+  # metadata_file <- reactive({
+  #   
+  #   req( input$metaDataFile )
+  #   
+  #   inFile <- input$metaDataFile
+  # 
+  #   inFile$datapath
+  # })
+  # 
+  # observeEvent( input$metaDataFile , {
+  #   
+  # })
   
  
   # Request Metatadata
@@ -380,7 +399,7 @@ login_info <- function( input, output, session,
       writeDataTable(  wb, sheet2, meta_variables() , rowNames = FALSE )
       writeDataTable( wb, sheet3,  org_Units$orgUnitLevels()  )
       writeDataTable( wb, sheet4, org_Units$orgUnits() %>%
-                        mutate( parent = "" )
+                        mutate( parent = parent$id ) 
                         , rowNames = FALSE )
       writeDataTable( wb, sheet5, data_elements$dataDictionary() , rowNames = FALSE )
       writeDataTable( wb, sheet6, data_elements$dataSets() , rowNames = FALSE )
@@ -413,19 +432,19 @@ login_info <- function( input, output, session,
     
   })
   
-  output$variables = DT::renderDT(
+  output$variables = renderTable(
 
     meta_variables() ,
-    extensions = 'Buttons' ,
-    rownames = FALSE,
-    options = list( autoWidth = TRUE , 
-        scrollX = TRUE  ,
-        lengthMenu = list( c( -1, 5, 10, 25, -1), list( 'All' , '5' , '10', '25') ) ,
-        columnDefs = list( list( className = 'dt-right' , targets="_all" ) ) ,
-        dom = 'tB' ,
-        buttons = buttonList( 
-          file_name = paste( instance() , '_variables_' , Sys.Date() ) )
-        )
+    # extensions = 'Buttons' ,
+    # rownames = FALSE,
+    # options = list( autoWidth = TRUE , 
+    #     scrollX = TRUE  ,
+    #     lengthMenu = list( c( -1, 5, 10, 25, -1), list( 'All' , '5' , '10', '25') ) ,
+    #     columnDefs = list( list( className = 'dt-right' , targets="_all" ) ) ,
+    #     dom = 'tB' ,
+    #     buttons = buttonList( 
+    #       file_name = paste( instance() , '_variables_' , Sys.Date() ) )
+    #     )
   )
   
 

@@ -54,11 +54,13 @@ orgUnits_UI <- function( id ) {
                 
                 tabPanel("geoFeatures", 
                          
-                        column( 6, DTOutput( ns( 'geoFeatures' ) ) ) ,
+                         leafletOutput( ns("geoFeatures_map") , height = "85vh") 
+                                        
+                        # column( 6, DTOutput( ns( 'geoFeatures' ) ) ) ,
+                        #  
+                        # column( 6, leafletOutput( ns("geoFeatures_map") ) )
                          
-                        column( 6, leafletOutput( ns("geoFeatures_map") ) )
-                         
-                ) 
+                )
     )
   )
 }
@@ -75,10 +77,10 @@ org_units <- function( input, output, session , login_baseurl) {
   baseurl = reactive({ login_baseurl$baseurl() })
   instance = reactive({ login_baseurl$instance() })
  
-
+## orgUnits reactive ####
   orgUnits = reactive({
     req( login() )
-    print( paste( 'orgUnits' ))
+
     if (  login() ){
 
       showModal(modalDialog("Downloading list of organisation units", footer=NULL))
@@ -87,8 +89,9 @@ org_units <- function( input, output, session , login_baseurl) {
       # if available, use resources method
       
       cols = c( 'level' , 'name', 'id', 'shortName' , 'displayName', 'displayShortName', 
-                "openingDate" , "leaf" , "parent" ,
-                'path' )
+                "leaf" , "parent" ,
+                'created' , 'openingDate' , 'lastUpdated' , 'closedDate' ,
+                'path',  'dataSets' , 'code' )
       
       # print( paste( 'cols:' , cols ) )
 
@@ -98,13 +101,17 @@ org_units <- function( input, output, session , login_baseurl) {
       
       ous =  get( url )[[1]] %>% 
         select( !!cols ) %>%
-        left_join( orgUnitLevels() %>% select( level, levelName ) , by = 'level' ) %>%
+        left_join( orgUnitLevels() %>% 
+                     select( level, levelName ) , by = 'level' 
+                   ) %>%
         select( level, levelName , everything() ) %>%
         arrange( level )
       
       
       # print( paste( 'col names:' , names( ous ) ) )
-
+      # test:
+      saveRDS( ous , 'ous.rds' )
+ 
       removeModal()
 
       return( ous )
@@ -141,6 +148,7 @@ org_units <- function( input, output, session , login_baseurl) {
 
   })
   
+## OrgUnitLevels ####
   
   orgUnitLevels = reactive({
     
@@ -184,53 +192,91 @@ org_units <- function( input, output, session , login_baseurl) {
   
   # output$n_ou = renderText( n_orgUnits() )
   
-  # download geo features ####
+  
+## download geo features ####
   ## for description of properties, see table 1.59, 
   ## https://docs.dhis2.org/2.22/en/developer/html/ch01s32.html
   
-  geoFeatures_download = function( level , .pb = NULL ){
+  geoFeatures_download = function( level = 2 , .pb = NULL ){
     
     print( "downloading geoFeatures level") ; print( level )
     
     update_progress(.pb)
     
-    url<-paste0( baseurl() , "api/geoFeatures.json?ou=ou:LEVEL-", level, "&paging=false")
+    url<-paste0( baseurl() , "api/organisationUnits.geojson?level=", level, "&paging=false")
     
     print( url )
     
-    fromJSON( content(GET(url), "text" ) ) %>% as_tibble()
+    geo = content( GET(url) , "text")
+    
+    return( geo )
   }
   
   geoFeatures = reactive({
     
+    require( orgUnits() , orgUnitLevels() )
+    
     if (  login() ){
 
       showModal(modalDialog("Gathering geoFeatures", footer=NULL))
+      
+      levels = orgUnitLevels()$level %>% unique 
 
-      # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
-      # if available, use resources method
+      geosf = list()
       
-      cols = c( 'level' , 'name', 'id', 'shortName' , 'displayName', 'displayShortName', "openingDate" , "leaf" , "parent" ,
-                'geometry' )
+      pb = progress_estimated( length( levels ) )
+      
+      for ( l in levels ){
+        
+        geo = geoFeatures_download( level = l , .pb = pb )
+        
+        tf = tempfile( 'geo' )
+        write_lines( geo, tf ) 
+        txt <- readLines( tf )
+        class(txt) <- "json"
+        
+        if ( !jsonlite::validate( txt ) ){
+          removeModal()
+          
+          return()
+        }
+        
+        print( 'converting json to sf' )
+          
+        geojsonsf = geojsonsf::geojson_sf( txt ) 
+        
+        has.data =  nrow( geojsonsf ) > 0
+        
+        print( paste( 'df level' ,l ) )
+        print( has.data )
+        
+        if ( has.data ){
+          
+          # test
+          # saveRDS( geosf , paste0('geosf' , l , '.rds') )
+          
+          geosf[[ l ]] <- geojsonsf 
+          
+          # print( glimpse( geosf[[ l ]] ) )
+          
+        }
+        
+      }
+      
+      sf = reduce( geosf , rbind )
 
-      url <- paste0( baseurl() ,"api/organisationUnits.json" ,
-                     "?fields=:all" ,
-                     # paste(cols, collapse = ",") , 
-                     "&paging=false")
+      print( 'geoFeatures' )
       
-      ous = GET( url ) %>% content(. , "text")
-  
-      # ous =  get( url )[[1]] %>% 
-      #   select( !!cols ) %>%
-      #   left_join( orgUnitLevels() %>% select( level, levelName ) , by = 'level' ) %>%
-      #   select( level, levelName , everything() ) %>%
-      #   arrange( level ) 
+      # print( names( sf ) )
       
-      print('geoFeatures')
-      print( names( ous ) )
+      print( 'link geoFeatures with orgUnits' )
       
-      # ous.sf = ous %>% read_sf()
-
+      ous =  sf %>% select( code, geometry ) %>%
+        left_join( orgUnits() , by = 'code' ) 
+      
+      # test
+      # saveRDS( ous , 'ous.rds')
+      
       removeModal()
 
       return( ous )
@@ -239,7 +285,10 @@ org_units <- function( input, output, session , login_baseurl) {
   })
   
   output$geoFeatures = renderDT( 
-    geoFeatures(), 
+
+    geoFeatures() %>% 
+      select( levelName , name , leaf, parent , 
+              lastUpdated , created, openingDate, closedDate ),
     
     rownames = FALSE, 
     extensions = 'Buttons' , 
@@ -248,7 +297,8 @@ org_units <- function( input, output, session , login_baseurl) {
           scrollX = TRUE  ,
           extensions = 'Buttons' , 
           options = 
-            DToptions_with_buttons( file_name = paste( instance() , '_GeoFeatures_' , Sys.Date() ) 
+            DToptions_with_buttons( 
+              file_name = paste( instance() , '_GeoFeatures_' , Sys.Date() ) 
                                     ) ,
 
           columnDefs = list( list( className = 'dt-right', 
@@ -262,53 +312,29 @@ org_units <- function( input, output, session , login_baseurl) {
     callback = JS('table.page(3).draw(false);')
     )
 
-  # polygons ####
-  
-  ous_geoFeatures = reactive({
-    
-    print( 'ous_geoFeatures' )
-
-    meta = list( organisationUnits =  geoFeatures() ,
-                 organisationUnitLevels = orgUnitLevels() )
-
-    print( 'ous_from_metatdata' )
-    
-    ogf = ous_from_metatdata( .meta = meta ,
-                              simplify = TRUE , simplify.keep = .02 ,
-                              SF = TRUE )
-
-    # ogf = ous_from_geoFeatures( geoFeatures = geoFeatures(),
-    #                                        orgUnits = orgUnits() , 
-    #                                        open.only = FALSE , # limit to clinics currently open, only,
-    #                                        fix = TRUE ,
-    #                                        SF = TRUE ,
-    #                                        simplify = TRUE ,
-    #                                        simplify.keep = .015 , # larger numbers yield less detail
-    #                                         )
-    return( ogf )
-  })
-  
   admins = reactive({ ous_geoFeatures() %>% filter( feature %in% 'Polygon' ) })
   
   # geoFeatures MAP ####
   output$geoFeatures_map = renderLeaflet({
     
-    admins = ous_geoFeatures() %>% filter( feature %in% 'Polygon' )
+    admins = geoFeatures()  # %>%  filter( feature %in% 'Polygon' )
+    
     regions = filter( admins , level == 2 )
+    
+    print( 'regions')
+    
+     print( names( regions ))
+     
     districts = filter( admins , level == 3 )
 
-    hf = ous_geoFeatures() %>% filter( feature %in% 'Point' )
+    hf = geoFeatures() # %>% filter( feature %in% 'Point' )
+
+    m  = mapview( regions )
     
-    tm = tm_shape( regions , projection="+proj=robin" ) + 
-      tm_polygons(  ) +
-      tm_borders("white", lwd = .5) +
-      tm_text("orgUnit.name", size = "AREA") +
-      
-      tm_shape( districts , projection="+proj=robin" ) + 
-      tm_polygons(  ) +
-      tm_text("orgUnit.name", size = "AREA") 
+    if ( nrow( districts ) > 0 )  m = m  + mapview( districts )
     
-    tmap_leaflet( tm )
+    m@map
+    
   })
 
   # geoFetures Map ####
@@ -385,16 +411,16 @@ org_units <- function( input, output, session , login_baseurl) {
     # class = 'white-space: nowrap', 
     rownames = FALSE , 
     extensions = 'Buttons' , 
-    
     options = 
       DToptions_with_buttons( file_name = paste( instance() , '_OrgUnitLevels_' , "_" , Sys.Date() ) )
   )
   
   output$orgUnit_table = DT::renderDT(
 
-    orgUnits()   , 
+    orgUnits() %>% select( - dataSets )   , 
     
     rownames = FALSE, 
+    filter = 'top' ,
     extensions = 'Buttons' , 
     options = 
       DToptions_with_buttons( file_name = paste( instance() , '_OrgUnits_' , Sys.Date() ) )

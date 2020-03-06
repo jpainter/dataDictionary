@@ -17,7 +17,7 @@ buttonList = function( file_name = paste( 'downloaded_' , Sys.Date() ) ){
 
 DToptions_with_buttons = function(...){
   list( autoWidth = TRUE , 
-        scrollX = TRUE  ,
+        scrollX = FALSE  ,
         lengthMenu = list( c( -1, 1 , 5, 10, 25, -1), list( 'All' , '1', '5' , '10', '25') ) ,
         columnDefs = list( list( className = 'dt-right' , targets="_all" ) ) ,
         dom = 'l<"col-sm-6"B>fiprt' ,
@@ -28,7 +28,7 @@ DToptions_with_buttons = function(...){
 
 DToptions_no_buttons = function(...){
   list( autoWidth = TRUE , 
-        scrollX = TRUE ,
+        scrollX = FALSE ,
         dom = 'l<"col-sm-6"i>fprt' ,
         # scrollX = TRUE  ,
         lengthMenu = list( c( -1, 1, 5, 10, 25, -1), list( 'All' , '1', '5' , '10', '25') ) ,
