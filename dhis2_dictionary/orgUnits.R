@@ -255,8 +255,13 @@ org_units <- function( input, output, session , login_baseurl) {
           # test
           # saveRDS( geosf , paste0('geosf' , l , '.rds') )
           
-          geosf[[ l ]] <- geojsonsf 
+          # for top level, add parent column
+          if (! 'parent' %in% names( geojsonsf )  ){
+            geojsonsf = mutate( geojsonsf, parent = NA )
+          }
           
+          geosf[[ l ]] <- geojsonsf 
+
           # print( glimpse( geosf[[ l ]] ) )
           
         }
@@ -317,21 +322,37 @@ org_units <- function( input, output, session , login_baseurl) {
   # geoFeatures MAP ####
   output$geoFeatures_map = renderLeaflet({
     
-    admins = geoFeatures()  # %>%  filter( feature %in% 'Polygon' )
-    
-    regions = filter( admins , level == 2 )
-    
-    print( 'regions')
-    
-     print( names( regions ))
-     
-    districts = filter( admins , level == 3 )
+    # admins = geoFeatures()  # %>%  filter( feature %in% 'Polygon' )
+    # 
+    # regions = filter( admins , level == 2 )
+    # 
+    # # print( 'regions')
+    # 
+    #  # print( names( regions ))
+    #  
+    # districts = filter( admins , level == 3 )
+    # 
+    # hf = geoFeatures() # %>% filter( feature %in% 'Point' )
 
-    hf = geoFeatures() # %>% filter( feature %in% 'Point' )
-
-    m  = mapview( regions )
+    # m  = mapview( regions )
     
-    if ( nrow( districts ) > 0 )  m = m  + mapview( districts )
+    # if ( nrow( districts ) > 0 )  m = m  + mapview( districts )
+    
+    # split features into map for each level
+    split_geofeatures = split( geoFeatures() , geoFeatures()$levelName )
+    
+    n_levels = length( split_geofeatures )
+    
+    # print( paste('geoFeatures split into' , n_levels , 'levels' , 
+                 # names( split_geofeatures ), collapse = ',' ) )
+    
+    colors = RColorBrewer::brewer.pal(n_levels, 'Pastel1')
+    
+    m = mapView( split_geofeatures , 
+                 # col.regions= as.list( c("red","blue",'green') )
+                 col.regions = as.list( colors ) ,
+                 # col = topo.colors(10)[1:n_levels]  %>% as.list 
+                 )
     
     m@map
     
