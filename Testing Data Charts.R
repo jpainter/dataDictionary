@@ -121,8 +121,7 @@ duplicates( weeklyDeaths.facility ,  key = c( orgUnit, data, name ) , index = We
 weeklyDeaths.facility.ts = weeklyDeaths.facility %>%
   as_tsibble( key = c(orgUnit, data, name ) , index = Week ) %>%
   # set NA to missing 
-  replace_na( list( value = 0 ) ) %>%
-  fill_gaps()
+  fill_gaps( list( value = 0 ) )
   
 
 ## Anomalies
