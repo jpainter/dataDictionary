@@ -120,6 +120,8 @@ duplicates( weeklyDeaths.facility ,  key = c( orgUnit, data, name ) , index = We
 
 weeklyDeaths.facility.ts = weeklyDeaths.facility %>%
   as_tsibble( key = c(orgUnit, data, name ) , index = Week ) %>%
+  # set NA to missing 
+  replace_na( list( value = 0 ) ) %>%
   fill_gaps()
   
 
@@ -128,7 +130,7 @@ library( anomalize )
 
 decompose =  weeklyDeaths.facility.ts %>% model( stl = STL( value ))
 
-anom =   decompose %>%
+anom =   decompose %>% components() %>%
   anomalize( Remainder , 
                    method = 'igr' , # "gesd", #'igr' faster but not as accurate  
                    alpha = 0.01 , max_anoms = 0.1 , verbose = TRUE  ) 
