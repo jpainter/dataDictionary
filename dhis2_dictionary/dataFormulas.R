@@ -336,8 +336,6 @@ malaria_data_formulas <- function( input, output, session ,
   # Formula data elements ####
   formulaElements = reactive({
     
-    req( input$formulaText )
-    
     ft = input$formulaText
     
     print( 'formulaElements ...')

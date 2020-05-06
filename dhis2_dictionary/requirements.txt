@@ -2,7 +2,6 @@ anytime
 assertthat
 class
 curl
-data.table
 DT
 dygraphs
 fable
@@ -24,12 +23,11 @@ knitr
 knitrProgressBar
 lattice
 leaflet
-lubridate
 maptools
-mapview
 nlme
 nnet
 openxlsx
+openxlsx 
 plotly
 raster
 RColorBrewer

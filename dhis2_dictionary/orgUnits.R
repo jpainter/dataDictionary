@@ -54,8 +54,6 @@ orgUnits_UI <- function( id ) {
                 
                 tabPanel("geoFeatures", 
                          
-                         downloadButton( ns( 'downloadGeoFeatures' ), 'Download geo features'),
-                         
                          leafletOutput( ns("geoFeatures_map") , height = "85vh") 
                                         
                         # column( 6, DTOutput( ns( 'geoFeatures' ) ) ) ,
@@ -461,25 +459,12 @@ org_units <- function( input, output, session , login_baseurl) {
 
     )
   
-# Download geoFeatures ####
-   # Download all meta data ####
-  # output$downloadGeoFeatures <- downloadHandler(
-  # 
-  #   filename = function() {
-  #     paste0( instance() , "_geoFeatures_", Sys.Date()  ,".rda"  )
-  #   } ,
-  #   
-  #   content = function( file ) {
-  # 
-  #     write_rds( geoFeatures() , file , overwrite = TRUE )
-  #    }
-  # )
+# ous.translated ####
   
 
 # return ####
   return(  list( orgUnitLevels = orgUnitLevels_with_counts , 
-                 orgUnits = orgUnits ,
-                 geoFeatures = geoFeatures )  
+                 orgUnits = orgUnits  )  
            ) # return reactive expression 
     
 }
