@@ -59,7 +59,10 @@ get = function( source_url , .print = TRUE , json = TRUE , ...){
   # https://stackoverflow.com/questions/57198836
   httr::set_config(httr::config(ssl_verifypeer=0L))
   
-  if ( .print ) print( paste( "downloading from" , source_url , "...") )
+  if ( .print ){
+    print( paste( "downloading from" , source_url , "...") ) 
+    print( Sys.time() )
+  } 
   
   from_url =  GET( source_url ) 
   
@@ -645,6 +648,9 @@ translate_formula = function( f ,
   de = anti_join( all_text, cc_text , by = 'end' ) 
   coc = anti_join( all_text, de , by = 'end' ) 
   
+  # TEST: 
+    # save( de, coc, elements.cc, elements.de, file='test_translate_form.rda')
+    
   trans = bind_rows( 
     de %>% inner_join( elements.de  ) ,
     coc %>% inner_join( elements.cc )
@@ -674,4 +680,76 @@ translate_formula = function( f ,
   return( f )
   
 }
+
+ formula_to_formulaElements = function( formulaText , dataElements ){
+
+    ft = formulaText
+    mde = dataElements
+    
+    print( 'formulaElements ...')
+    print( ft )
+    
+    if ( nchar( ft ) == 0 ) return( mde() %>% filter( FALSE ) )
+    
+    # Parse elements separated by mathematical operator between ] and [
+    # example:  "[a].[b - c] + [a].[e - f]" -> "[a].[b - c]"  ,  "[a].[e - f]"
+    formulaElements = strsplit( ft , "\\] [-+*\\/] \\[" ) %>% unlist %>% str_trim 
+    
+    # Table of elements and categories
+    formulaParts = 
+      tibble( formulaElements = formulaElements ) %>%
+      mutate( 
+        
+        dataElement = map( formulaElements , ~strsplit( .x , "].[" , fixed = TRUE ) %>% unlist ) %>%
+          map( . , 1 ) %>%
+          str_replace_all( . , "\\[|\\]" , "" ) %>%
+          str_replace_all( . , fixed("]") , "" ) %>%
+          str_replace_all( . , fixed("[") , "" ) %>%
+          str_trim() ,
+        
+        Categories = 
+          map( formulaElements , ~str_split( .x , fixed("].[") ) %>% unlist ) %>%
+          map( . , 2 ) %>% 
+          # str_replace_all( . , "\\[|\\]" , "" ) %>%
+          str_replace_all( . , fixed("]") , "" ) %>%
+          str_replace_all( . , fixed("[") , "" ) %>%
+          str_trim() 
+        
+      ) %>% select( dataElement , Categories ) %>% unique
+    
+    print( 'formula parts ... ')
+    print( formulaParts )
+    
+    mde = mde  %>% 
+      separate_rows( Categories , categoryOptionCombo.ids, sep = ";" ) %>%
+      mutate( Categories = Categories %>% str_trim  ,
+              categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )
+    # 
+    # print( 'mde() ... ')
+    # print( mde() )
+    # 
+    print( 'mde ... ')
+    # print( mde )
+    
+    # Filter MDE to formula elements:
+    tableOfFormulaElements = 
+      bind_rows(
+        # elements and categories
+        inner_join( mde, 
+                    formulaParts %>% filter( !Categories %in% "NULL" ) , 
+                    by = c("dataElement", "Categories" ) ) ,
+        # elements only
+        semi_join( mde, 
+                   formulaParts %>% filter( Categories %in% "NULL"  ) , 
+                   by = "dataElement" ) 
+      ) %>%
+      unique() %>%
+       arrange( dataElement , Categories )
+    
+    print( 'table of formula elements' )
+    print( tableOfFormulaElements )
+    
+    return( tableOfFormulaElements )
+    
+  }
 

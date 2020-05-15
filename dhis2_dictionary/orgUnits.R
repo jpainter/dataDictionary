@@ -54,6 +54,8 @@ orgUnits_UI <- function( id ) {
                 
                 tabPanel("geoFeatures", 
                          
+                         downloadButton( ns( 'downloadGeoFeatures' ), 'Download geo features'),
+                         
                          leafletOutput( ns("geoFeatures_map") , height = "85vh") 
                                         
                         # column( 6, DTOutput( ns( 'geoFeatures' ) ) ) ,
@@ -78,6 +80,24 @@ org_units <- function( input, output, session , login_baseurl) {
   instance = reactive({ login_baseurl$instance() })
  
 ## orgUnits reactive ####
+  
+  # TODO : download ids then create progress bar retrieiving complete info
+  # orgUnitIds = reactive({
+  #      req( login() )
+  # 
+  #   if (  login() ){
+  # 
+  #     showModal(modalDialog("Downloading list of organisation units ids", footer=NULL))
+  # 
+  #     url <- paste0( baseurl() ,
+  #                    "api/organisationUnits.json?fields=id&paging=false")
+  #     
+  #     ousIds =  get( url )[[1]]
+  #     
+  #   } else { "Unable to login to server" }
+  #     
+  # })
+  
   orgUnits = reactive({
     req( login() )
 
@@ -89,9 +109,12 @@ org_units <- function( input, output, session , login_baseurl) {
       # if available, use resources method
       
       cols = c( 'level' , 'name', 'id', 'shortName' , 'displayName', 'displayShortName', 
-                "leaf" , "parent" ,
+                "leaf" , 
                 'created' , 'openingDate' , 'lastUpdated' , 'closedDate' ,
-                'path',  'dataSets' , 'code' )
+                # 'path',  
+                "parent" , 
+                # 'dataSets' , 
+                'code' )
       
       # print( paste( 'cols:' , cols ) )
 
@@ -110,7 +133,7 @@ org_units <- function( input, output, session , login_baseurl) {
       
       # print( paste( 'col names:' , names( ous ) ) )
       # test:
-      saveRDS( ous , 'ous.rds' )
+      # saveRDS( ous , 'ous.rds' )
  
       removeModal()
 
@@ -242,7 +265,17 @@ org_units <- function( input, output, session , login_baseurl) {
         }
         
         print( 'converting json to sf' )
-          
+        
+        # testing
+        # write_lines( geo, 'testingGeo.txt' )
+        
+        # Clean json:
+        txt = fix_coordinate_brackets( txt )
+        
+        # Change Multipolygon to Point
+        txt = gsub( 'MultiPolygon' , 'Point' , txt)
+        class(txt) <- "json"
+    
         geojsonsf = geojsonsf::geojson_sf( txt ) 
         
         has.data =  nrow( geojsonsf ) > 0
@@ -272,13 +305,24 @@ org_units <- function( input, output, session , login_baseurl) {
 
       print( 'geoFeatures' )
       
-      # print( names( sf ) )
+      glimpse( sf ) 
       
-      print( 'link geoFeatures with orgUnits' )
+      # test
+      # saveRDS( sf , 'sf.rds')
+      # saveRDS( orgUnits() , 'orgUnits.rds')
       
-      ous =  sf %>% select( code, geometry ) %>%
-        left_join( orgUnits() , by = 'code' ) 
+      print( 'linking geoFeatures with orgUnits' )
       
+      ous =  sf %>% 
+        select( code, geometry ) %>%
+        filter( ! is.na( code ) ) %>%
+        left_join( orgUnits() %>% 
+                     filter( ! is.na( code ) ) %>%
+                     select( code ,levelName , name , leaf, parent , 
+                             lastUpdated , created, openingDate, closedDate ), 
+                   by = 'code' ) 
+      
+      glimpse( ous )
       # test
       # saveRDS( ous , 'ous.rds')
       
@@ -291,9 +335,7 @@ org_units <- function( input, output, session , login_baseurl) {
   
   output$geoFeatures = renderDT( 
 
-    geoFeatures() %>% 
-      select( levelName , name , leaf, parent , 
-              lastUpdated , created, openingDate, closedDate ),
+    geoFeatures() ,
     
     rownames = FALSE, 
     extensions = 'Buttons' , 
@@ -438,7 +480,12 @@ org_units <- function( input, output, session , login_baseurl) {
   
   output$orgUnit_table = DT::renderDT(
 
-    orgUnits() %>% select( - dataSets )   , 
+    # do not include dataSets (if downloaded )
+    if ( 'dataSets' %in% names(orgUnits() ) ){
+      orgUnits() %>% select( - dataSets )  
+    }  else {
+      orgUnits() 
+      } , 
     
     rownames = FALSE, 
     filter = 'top' ,
@@ -459,12 +506,25 @@ org_units <- function( input, output, session , login_baseurl) {
 
     )
   
-# ous.translated ####
+# Download geoFeatures ####
+   # Download all meta data ####
+  # output$downloadGeoFeatures <- downloadHandler(
+  # 
+  #   filename = function() {
+  #     paste0( instance() , "_geoFeatures_", Sys.Date()  ,".rda"  )
+  #   } ,
+  #   
+  #   content = function( file ) {
+  # 
+  #     write_rds( geoFeatures() , file , overwrite = TRUE )
+  #    }
+  # )
   
 
 # return ####
   return(  list( orgUnitLevels = orgUnitLevels_with_counts , 
-                 orgUnits = orgUnits  )  
+                 orgUnits = orgUnits ,
+                 geoFeatures = geoFeatures )  
            ) # return reactive expression 
     
 }

@@ -70,11 +70,11 @@ dataQuality <- function( input, output, session ,
   # data file ####
   data_file <- reactive({
     
-    print( 'data file .... \n')
-    
     req( input$dataFile )
     
-        print( 'data file selected \n')
+    print( 'data file .... \n')
+    
+    print( 'data file selected \n')
     
     inFile <- input$dataFile
     
@@ -84,6 +84,8 @@ dataQuality <- function( input, output, session ,
   })
   
   uploaded_data = reactive({ 
+    
+    req( data_file() )
     
     print( paste( 'reactive file choice' , data_file() ) )
     
@@ -96,6 +98,8 @@ dataQuality <- function( input, output, session ,
     })
   
   uploaded_elements = reactive({ 
+    
+    req( data_file() )
     
     de = read.xlsx( data_file() ,  "Formula Elements" )  %>%
       unite( 'dataName', dataElement , Categories ) 

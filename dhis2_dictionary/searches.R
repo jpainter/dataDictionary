@@ -1,7 +1,7 @@
 # search strings
 
 malaria_search_words =  as.character( expression( malaria , paludisme, Pf, plasmodium , falciparum, vivax, RDT, TDR, rapid, slide, goutte ) ) %>% paste( collapse = ', ')
-malaria_search_strings =  as.character( expression( palu, Pf, plasmodi , micro , rapid) ) %>% paste( collapse = ', ')
+malaria_search_strings =  as.character( expression( palu, Pf, plasmodi , micro , rapid ) ) %>% paste( collapse = ', ')
 
 anc_iptp_search_words =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')
 anc_iptp_search_strings =  as.character( expression( ANC, CPN, IPT , TPI ) ) %>% paste( collapse = ', ')

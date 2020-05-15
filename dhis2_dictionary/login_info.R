@@ -225,6 +225,9 @@ login_info <- function( input, output, session,
   
   credentialsProvided <- reactive({
     
+    req( baseurl()  )
+    req( input$username )
+    
     credentialsProvided = !is_empty( baseurl() ) && !is_empty( input$username ) && !is_empty( input$password ) 
     
     print( paste( 'toLogin' , credentialsProvided ))

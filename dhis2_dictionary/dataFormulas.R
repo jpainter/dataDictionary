@@ -77,9 +77,16 @@ malaria_data_formulas_UI <- function( id ) {
                           
                           h3( "Add to the formula by clicking on a Row (below)" , width = '50%') ,
                           
-                          checkboxInput( ns('showCategoryOptions') , 
+                          fluidRow( 
+                            
+                            checkboxInput( ns('showCategoryOptions') , 
                                 "List each category option as a separate line" ,
-                                value = TRUE ) ,
+                                value = TRUE ) , 
+                          
+                            checkboxInput( ns('showMalariaRelevant') , 
+                                           "Only show malaria-relevant elements (uncheck to see all)" ,
+                                           value = TRUE ) 
+                          ) ,
 
                           DTOutput( ns('malariaDataElements') )
     
@@ -161,6 +168,7 @@ malaria_data_formulas_UI <- function( id ) {
 # Server function ####
 malaria_data_formulas <- function( input, output, session , 
                                    malariaDataElements , 
+                                   allDataElements , 
                                    org_Units, 
                                    login_baseurl  ){
   # imported reactives ####
@@ -170,6 +178,9 @@ malaria_data_formulas <- function( input, output, session ,
   
   # malaria data elements
   mde = reactive({ malariaDataElements$malariaDataElements() }) 
+  
+  # all data elements
+  ade = reactive({ allDataElements$dataDictionary() })
   
   # malaria datasets
   mds = reactive({ malariaDataElements$malariaDataSets() }) 
@@ -184,7 +195,7 @@ malaria_data_formulas <- function( input, output, session ,
       count(., level , levelName) %>%
       pull( levelName )
 
-    updateSelectInput(  session, 'orgUnits' ,
+    updateSelectInput( session, 'orgUnits' ,
                        choices =  c(l , 'Leaf' , 'All levels') , 
                        selected = head( l , 1 )
     )
@@ -278,14 +289,23 @@ malaria_data_formulas <- function( input, output, session ,
   } )
   
  
-  # Display table of malaria data elements ####
+  # Display table of (malaria data) elements ####
   output$malariaDataElements = DT::renderDT( 
     
-    if ( input$showCategoryOptions ){
-      mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
-    } else {
-      mde()  
-    } , 
+    if ( input$showMalariaRelevant ){ 
+      e = mde() 
+      if ( input$showCategoryOptions ){
+        e  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
+      }
+      
+    } else { 
+      e = ade()
+      if ( input$showCategoryOptions ){
+        e  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
+      }  
+      }
+    
+    , 
     
     rownames = FALSE, 
     filter = 'top' ,
@@ -297,6 +317,8 @@ malaria_data_formulas <- function( input, output, session ,
   # Add element to formula when clicked ####
   observeEvent( input$malariaDataElements_rows_selected , {
     
+    if ( input$showMalariaRelevant ){ e = mde() } else { e = ade() }
+    
     row = input$malariaDataElements_rows_selected
     
     print( row )
@@ -305,15 +327,15 @@ malaria_data_formulas <- function( input, output, session ,
       
       value = if ( input$showCategoryOptions ){
         
-        d = mde()  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
+        d = e  %>% separate_rows( Categories , categoryOptionCombo.ids, sep = ";" )
         de = d$dataElement[ row ] %>% str_trim
         de.cc = d$Categories[ row ] %>% str_trim
         paste0( "[" , de , "].[" , de.cc , "]")
         
       } else {
         
-        de.id = mde()$dataElement.id[ row ] %>% str_trim
-        de = mde()$dataElement[ row ] %>% str_trim
+        de.id = e$dataElement.id[ row ] %>% str_trim
+        de = e$dataElement[ row ] %>% str_trim
         paste0( "[" , de , "]" )
       }
         
@@ -335,6 +357,8 @@ malaria_data_formulas <- function( input, output, session ,
   
   # Formula data elements ####
   formulaElements = reactive({
+    
+    req( input$formulaText )
     
     ft = input$formulaText
     
@@ -372,7 +396,9 @@ malaria_data_formulas <- function( input, output, session ,
     print( 'formula parts ... ')
     print( formulaParts )
     
-    mde =  mde()  %>% 
+    if ( input$showMalariaRelevant ){ e = mde() } else { e = ade() }
+    
+    mde = e  %>% 
       separate_rows( Categories , categoryOptionCombo.ids, sep = ";" ) %>%
       mutate( Categories = Categories %>% str_trim  ,
               categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )
@@ -754,7 +780,15 @@ malaria_data_formulas <- function( input, output, session ,
     # print( 'this is d....\n' )
     # 
     print( paste( 'nrow(d)' , nrow(d) ) )
-
+    print( paste( 'formula_expression:' , formula_expression()  ) )
+    
+      # parse expressions...
+      sum.fe = paste("sum(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
+      min.fe = paste("min(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
+      max.fe = paste("max(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
+      # any.fe = paste("any(c(" , str_replace_all( formula_expression , fixed("+") , "," ) , "))" )
+      print( paste( 'sum.fe:' , sum.fe ) )
+      
       # Combine dataset for sum and counts 
       dataset_sum = d %>%
         select( - COUNT ) %>%
@@ -762,14 +796,15 @@ malaria_data_formulas <- function( input, output, session ,
           names_from = box,
           values_from = SUM ) %>%
         group_by( levelName, orgUnitName, orgUnit, period  )  %>%
-        summarise( sum = eval( parse( text  = formula_expression() ) ) )
+        summarise( sum = eval( parse( text  = sum.fe ) ) )
       
       # count expressions...
       min.fe = paste("min(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
       max.fe = paste("max(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
       # any.fe = paste("any(c(" , str_replace_all( formula_expression , fixed("+") , "," ) , "))" )
       
-      # print( paste( 'colnames dataset_sum' , colnames(dataset_sum)  ) )
+      print( paste( 'colnames dataset_sum' , colnames(dataset_sum)  ) )
+      print( paste( 'min.fe:' , min.fe ) )
       
       dataset_count = d %>%
         select( - SUM ) %>%
@@ -827,7 +862,10 @@ malaria_data_formulas <- function( input, output, session ,
     
     
     filename = function() { 
-      paste0( instance() , "_" , input$formulaName , "_" , Sys.Date()  ,".xlsx"  )
+      paste0( instance() , "_" , input$formulaName , "_" , 
+              input$orgUnits , "_" , 
+              input$period , "_" , 
+              Sys.Date()  ,".xlsx"  )
     } ,
     
     content = function( file ) {
@@ -867,9 +905,21 @@ malaria_data_formulas <- function( input, output, session ,
       sheet3  <- addWorksheet( wb, sheetName = "Formula Elements")
       
       writeDataTable(  wb, sheet2, formula_table() , rowNames = FALSE)
-      writeDataTable( wb, sheet3,    formulaElements() %>% 
-                        select( -dataElement.id , -displayName , everything() ) , 
-                      rowNames = FALSE)
+      
+      fe = map_df( which( nchar(formula_table()$Formula.Name) > 0  ) ,~{
+        formula.name = formula_table()$Formula.Name[ .x ]
+        formula = formula_table()$Formula[ .x ]
+        fe = 
+            formula_to_formulaElements( formula , mde() ) %>% 
+                        select( -dataElement.id , -displayName , everything() ) %>%
+            mutate( Formula.Name = formula.name ) %>%
+            select( Formula.Name , everything() )
+        
+        return( fe )
+      }
+      )
+      
+      writeDataTable( wb, sheet3, fe , rowNames = FALSE)
       
       openxlsx::saveWorkbook( wb , file , overwrite = TRUE )   
       
