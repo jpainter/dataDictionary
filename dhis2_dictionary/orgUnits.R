@@ -509,17 +509,17 @@ org_units <- function( input, output, session , login_baseurl) {
   
 # Download geoFeatures ####
    # Download all meta data ####
-  # output$downloadGeoFeatures <- downloadHandler(
-  # 
-  #   filename = function() {
-  #     paste0( instance() , "_geoFeatures_", Sys.Date()  ,".rda"  )
-  #   } ,
-  #   
-  #   content = function( file ) {
-  # 
-  #     write_rds( geoFeatures() , file , overwrite = TRUE )
-  #    }
-  # )
+  output$downloadGeoFeatures <- downloadHandler(
+
+    filename = function() {
+      paste0( instance() , "_geoFeatures_", Sys.Date()  ,".rda"  )
+    } ,
+
+    content = function( file ) {
+
+      write_rds( geoFeatures() , file , overwrite = TRUE )
+     }
+  )
   
 
 # return ####
