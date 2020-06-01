@@ -465,7 +465,8 @@ malaria_data_formulas <- function( input, output, session ,
     withProgress(message =  'Requests are being made for Sums and Counts\n',
                  detail = aggregationType. , 
                  value = 0 , {
-                   
+      
+      # TODO: parellize with furrr:future_map (plan-multiprocess)             
       for ( i in 1:n_periods ){
         
         data[[i]] = fetch_get( baseurl. , de. , periods_vector[i] , ouLevel , aggregationType. )

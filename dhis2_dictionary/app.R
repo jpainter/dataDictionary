@@ -86,7 +86,6 @@ source( 'dataFormulas.R' )
 source( 'dataQuality.R' )
 source( 'DToptions.R')
 source( 'ous_from_geoFeatures.R' )
-source( 'ous_from_geoFeatures.R' )
 
 # setup ####
 
@@ -283,6 +282,7 @@ server <-  function(input, output, session){
    
    malaria_data_formulas = callModule( malaria_data_formulas , "formulas" ,
                                       malariaDataElements = malaria_data_elements ,
+                                      allDataElements = data_dictionary ,
                                       org_Units = org_Units ,  
                                       login_baseurl = login_baseurl ) 
    

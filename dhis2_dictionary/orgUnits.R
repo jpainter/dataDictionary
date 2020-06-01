@@ -267,14 +267,15 @@ org_units <- function( input, output, session , login_baseurl) {
         print( 'converting json to sf' )
         
         # testing
-        # write_lines( geo, 'testingGeo.txt' )
+        write_lines( geo, 'testingGeo.txt' )
         
-        # Clean json:
-        txt = fix_coordinate_brackets( txt )
-        
-        # Change Multipolygon to Point
-        txt = gsub( 'MultiPolygon' , 'Point' , txt)
-        class(txt) <- "json"
+        # if FAILS ... TRY THese 
+        # # Clean json: 
+        # txt = fix_coordinate_brackets( txt )
+        # 
+        # # Change Multipolygon to Point
+        # txt = gsub( 'MultiPolygon' , 'txtPoint' , txt)
+        # class(txt) <- "json"
     
         geojsonsf = geojsonsf::geojson_sf( txt ) 
         
