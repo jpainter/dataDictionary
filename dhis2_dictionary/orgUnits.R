@@ -133,7 +133,7 @@ org_units <- function( input, output, session , login_baseurl) {
       
       # print( paste( 'col names:' , names( ous ) ) )
       # test:
-      # saveRDS( ous , 'ous.rds' )
+      # saveRDS( ous , 'orgUnits.rds' )
  
       removeModal()
 
@@ -230,9 +230,17 @@ org_units <- function( input, output, session , login_baseurl) {
     
     print( url )
     
-    geo = content( GET(url) , "text")
+    geo = content( GET(url) , "text")  # indirect?
+    # test
+    # glimpse( fromJSON( geo ) ) # see how many rows before sf conversion 
+    geojsonsf = geojsonio::geojson_sf( geo ) # works?!
     
-    return( geo )
+    # geojsonsf = geojsonsf::geojson_sf( geo ) # returns group instead of id???
+    
+    # test
+    glimpse( geojsonsf )
+    
+    return( geojsonsf )
   }
   
   geoFeatures = reactive({
@@ -251,23 +259,25 @@ org_units <- function( input, output, session , login_baseurl) {
       
       for ( l in levels ){
         
-        geo = geoFeatures_download( level = l , .pb = pb )
+        geosf[[ l ]] = geoFeatures_download( level = l , .pb = pb )
         
-        tf = tempfile( 'geo' )
-        write_lines( geo, tf ) 
-        txt <- readLines( tf )
-        class(txt) <- "json"
+        # geojsonsf = geojsonsf::geojson_sf( geo ) 
+                
+        # tf = tempfile( 'geo' )
+        # write_lines( geo, tf ) 
+        # txt <- readLines( tf )
+        # class(txt) <- "json"
+        # 
+        # if ( !jsonlite::validate( txt ) ){
+        #   removeModal()
+        #   
+        #   return()
+        # }
         
-        if ( !jsonlite::validate( txt ) ){
-          removeModal()
-          
-          return()
-        }
-        
-        print( 'converting json to sf' )
+        # print( 'converting json to sf' )
         
         # testing
-        write_lines( geo, 'testingGeo.txt' )
+        # write_lines( geo, 'testingGeo.txt' )
         
         # if FAILS ... TRY THese 
         # # Clean json: 
@@ -277,12 +287,11 @@ org_units <- function( input, output, session , login_baseurl) {
         # txt = gsub( 'MultiPolygon' , 'txtPoint' , txt)
         # class(txt) <- "json"
     
-        geojsonsf = geojsonsf::geojson_sf( txt ) 
+        # geojsonsf = geojsonsf::geojson_sf( txt ) 
         
-        has.data =  nrow( geojsonsf ) > 0
-        
+        has.data =  nrow( geosf[[ l ]] ) > 0
         print( paste( 'df level' ,l ) )
-        print( has.data )
+        # print( has.data )
         
         if ( has.data ){
           
@@ -290,13 +299,11 @@ org_units <- function( input, output, session , login_baseurl) {
           # saveRDS( geosf , paste0('geosf' , l , '.rds') )
           
           # for top level, add parent column
-          if (! 'parent' %in% names( geojsonsf )  ){
-            geojsonsf = mutate( geojsonsf, parent = NA )
+          if (! 'parent' %in% names( geosf[[ l ]] )  ){
+            geosf[[ l ]] = mutate( geosf[[ l ]], parent = NA )
           }
-          
-          geosf[[ l ]] <- geojsonsf 
 
-          # print( glimpse( geosf[[ l ]] ) )
+          glimpse( geosf[[ l ]] )
           
         }
         
@@ -315,17 +322,20 @@ org_units <- function( input, output, session , login_baseurl) {
       print( 'linking geoFeatures with orgUnits' )
       
       ous =  sf %>% 
-        select( code, geometry ) %>%
-        filter( ! is.na( code ) ) %>%
-        left_join( orgUnits() %>% 
-                     filter( ! is.na( code ) ) %>%
-                     select( code ,levelName , name , leaf, parent , 
+        select( id, geometry ) %>%
+        # filter( ! is.na( code ) ) %>%
+        right_join( orgUnits() %>% 
+                     # filter( ! is.na( code ) ) %>%
+                     select( id, levelName , name , leaf, parent , 
                              lastUpdated , created, openingDate, closedDate ), 
-                   by = 'code' ) 
+                   by = 'id' ) 
+      
+      # TODO: impute location of missing facilities/admin areas 
       
       glimpse( ous )
+      print( paste( 'missing geometry for' , sum( is.na( ous$geometry ))) )
       # test
-      # saveRDS( ous , 'ous.rds')
+      saveRDS( ous , 'ous.rds')
       
       removeModal()
 
@@ -512,12 +522,12 @@ org_units <- function( input, output, session , login_baseurl) {
   output$downloadGeoFeatures <- downloadHandler(
 
     filename = function() {
-      paste0( instance() , "_geoFeatures_", Sys.Date()  ,".rda"  )
+      paste0( instance() , "_geoFeatures_", Sys.Date()  , ".rds"  )
     } ,
 
     content = function( file ) {
 
-      write_rds( geoFeatures() , file , overwrite = TRUE )
+      saveRDS( geoFeatures() , file )
      }
   )
   
