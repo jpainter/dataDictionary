@@ -394,19 +394,29 @@ org_units <- function( input, output, session , login_baseurl) {
     # split features into map for each level
     split_geofeatures = split( geoFeatures() , geoFeatures()$levelName )
     
-    n_levels = length( split_geofeatures )
+    # test for empty geometry
+    not_all_empty_geo = map_lgl( split_geofeatures , ~!all(is.na(st_dimension(.x))) )
+    
+    n_levels = sum( not_all_empty_geo )
     
     # print( paste('geoFeatures split into' , n_levels , 'levels' , 
                  # names( split_geofeatures ), collapse = ',' ) )
     
     colors = RColorBrewer::brewer.pal(n_levels, 'Pastel1')
+    # colors = topo.colors(10)[ n_levels ] 
     
-    m = mapView( split_geofeatures , 
-                 # col.regions= as.list( c("red","blue",'green') )
-                 col.regions = as.list( colors ) ,
-                 # col = topo.colors(10)[1:n_levels]  %>% as.list 
-                 )
+    # m = mapView( split_geofeatures[ not_all_empty_geo ] , 
+    #              # col.regions= as.list( c("red","blue",'green') )
+    #              col.regions = as.list( colors ) ,
+    #              # col = topo.colors(10)[1:n_levels]  %>% as.list 
+    #              )
     
+    m_list = map( 1:n_levels ,
+                  ~mapView( split_geofeatures[ .x ] , 
+                            col.regions = colors[ .x ]
+                  ))
+    m = reduce( m_list , `+`)
+
     m@map
     
   })
