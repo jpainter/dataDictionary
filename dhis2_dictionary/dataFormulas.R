@@ -196,7 +196,7 @@ malaria_data_formulas <- function( input, output, session ,
       pull( levelName )
 
     updateSelectInput( session, 'orgUnits' ,
-                       choices =  c(l , 'Leaf' , 'All levels') , 
+                       # choices =  c(l , 'Leaf' , 'All levels') , 
                        selected = head( l , 1 )
     )
                 })
