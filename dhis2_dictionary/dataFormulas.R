@@ -194,9 +194,11 @@ malaria_data_formulas <- function( input, output, session ,
     l =  ousLevels()  %>% as_tibble() %>% 
       count(., level , levelName) %>%
       pull( levelName )
+    
+    print( paste('dataFormulas: ousLevels' , l ))
 
     updateSelectInput( session, 'orgUnits' ,
-                       # choices =  c(l , 'Leaf' , 'All levels') , 
+                       choices =  c(l ) , #, 'Leaf' , 'All levels') , 
                        selected = head( l , 1 )
     )
                 })
