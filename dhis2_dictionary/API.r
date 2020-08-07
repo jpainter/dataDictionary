@@ -148,7 +148,10 @@ get_in_parts = function( baseurl. , de. , periods. , orgUnits. , aggregationType
 date_code = function( 
   years = NULL , 
   months = NULL ,
-  YrsPrevious = 5 ){
+  startPeriod = NULL , 
+  YrsPrevious = 5 ,
+  currentMonth = TRUE  # include current month
+  ){
   
   if ( is.null( months ) )  months = 1:12
   
@@ -163,11 +166,17 @@ date_code = function(
   # get current month.  List months from Jan/FiveYearsPrevious 
   # through month before current month
   library( zoo )
-  startMonth = as.yearmon( YrsPrevious )
+  if ( is.null( startPeriod ) ){
+    startMonth = as.yearmon( YrsPrevious )
+  } else {
+    startMonth = as.yearmon( startPeriod , "%Y%m")
+  }
+  
   endMonth = Sys.yearmon()
   months = seq( startMonth, endMonth , 1/12 ) %>% format(., "%Y%m")
   
   # remove current month ;
+  if (currentMonth == FALSE )
   months = months[ 1:( length(months) - 1)]
   
   period = paste( months, collapse = ";" )
@@ -596,6 +605,119 @@ api_last12months_national_data = function(
   return( data )
 }
 
+
+  fetch <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
+    
+    print( paste( 'period is ', periods. ) )
+    periods_vector = str_split( periods. , ";" ) %>% unlist
+    
+    n_periods = length( periods_vector )
+    print( paste( 'n_periods' , n_periods ))
+    
+    # translate level name to LEVEL-1, etc
+    # level = levels %>% filter( levelName %in% orgUnits.) %>% pull( level )
+    # ouLevel = paste0( "LEVEL-", level )
+    # print( paste( level, ouLevel) )
+    
+    data = list( n_periods )
+    
+    withProgress(message =  'Requests are being made for Sums and Counts\n',
+                 detail = paste( orgUnits. , aggregationType. ) , 
+                 value = 0 , {
+      
+      # TODO: parellize with furrr:future_map (plan-multiprocess)             
+      for ( i in 1:n_periods ){
+        
+        data[[i]] = fetch_get( baseurl. , de. , periods_vector[i] , orgUnits. , aggregationType. )
+        
+        incProgress(1/ n_periods )
+        
+        }
+      })
+    
+    return( bind_rows( data ) )
+  }
+  
+  fetch_get <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
+    
+    url = api_url( baseurl. , de. , periods. , orgUnits. , aggregationType. )
+    
+    # fetch = retry( get( url , .print = TRUE )[[1]] ) # if time-out or other error, will retry 
+    fetch = get( url , .print = TRUE )
+    
+    # print( paste( 'fetch class' , class( fetch ) ) )
+    # print( paste( 'fetch class[[1]]' , class( fetch[[1]] ) ) ) 
+    
+    fetch = fetch[[1]] 
+    
+    # if returns a data frame of values (e.g. not 'server error'), then keep
+    # print( paste( 'did fetch return data frame?' , is.data.frame( fetch )))
+    
+    if ( is.data.frame( fetch ) ){ 
+      
+    # remove unneeded cols
+      
+      cols = colnames( fetch ) 
+      
+      unneeded.cols = which( cols %in% c( 'storedBy', 'created', 'lastUpdated', 'comment' ))
+    
+      # print( glimpse( fetch )  )
+      
+      # print( paste( 'unneeded cols' , 
+      #               paste( unneeded.cols , collapse = "," ))
+      # )
+      
+      data.return = fetch %>% select( -unneeded.cols ) %>% as_tibble()
+      
+      print( paste( 'col names data', 
+                    paste( colnames( data.return ) , collapse = "," ) 
+                    )
+      )
+      
+      } else {
+      
+      print( paste( nrow( fetch ) , 'records\n' ) )
+      
+      de.cat = str_split( de. , fixed(".")) %>% unlist  
+      
+      data.return  = tibble( 
+        dataElement = de.cat[1] , 
+        categoryOptionCombo = de.cat[2] , 
+        period =  periods. ,
+        orgUnit =  orgUnits. ,
+        aggregationType = aggregationType. ,
+        value = NA
+      )
+      
+      print( "no records" )
+    }
+    
+    return( data.return )
+  }
+  
+  translate_fetch = function( df , formulaElements , ous ){
+    
+      df %>%
+      
+      rename( dataElement.id = dataElement , 
+              categoryOptionCombo.ids = categoryOptionCombo 
+      ) %>%
+      
+      left_join( formulaElements %>% 
+                   select( dataElement, dataElement.id , 
+                           Categories, categoryOptionCombo.ids ) %>% 
+                   mutate( dataElement.id = dataElement.id %>% str_trim ,
+                           categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )  ,
+                 by = c( "dataElement.id" , "categoryOptionCombo.ids" )
+      ) %>%
+      
+      left_join( ous %>% 
+                   select( id, name, level, levelName )  %>% 
+                   rename( orgUnit = id , orgUnitName = name ) ,
+                 by = 'orgUnit' 
+      )  
+  }
+ 
 ### Translate Formula Function  ####
 translate_formula = function( f , 
                               elements , 

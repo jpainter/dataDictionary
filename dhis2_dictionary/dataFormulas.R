@@ -73,7 +73,7 @@ malaria_data_formulas_UI <- function( id ) {
     
     tabsetPanel( type = "tabs", 
  
-                tabPanel( h3( "Build/edit Formulas by selecting elements    " ) ,
+                tabPanel( h4( "Build/edit Formulas by selecting elements    " ) ,
                           
                           h3( "Add to the formula by clicking on a Row (below)" , width = '50%') ,
                           
@@ -92,7 +92,7 @@ malaria_data_formulas_UI <- function( id ) {
     
                 ) ,
                 
-                tabPanel( h3('Details of elements in formula') ,
+                tabPanel( h4('Details of elements in formula') ,
                           fluidRow(
                             
                             column( 12 ,
@@ -104,7 +104,7 @@ malaria_data_formulas_UI <- function( id ) {
                           )
                           ),
                 
-                tabPanel( h3( "    Request Data" ) ,
+                tabPanel( h4( "    Request Data" ) ,
                           
                       fluidRow( 
                            column( 3 ,
@@ -198,7 +198,7 @@ malaria_data_formulas <- function( input, output, session ,
     print( paste('dataFormulas: ousLevels' , l ))
 
     updateSelectInput( session, 'orgUnits' ,
-                       choices =  c(l ) , #, 'Leaf' , 'All levels') , 
+                       choices =  c('Leaf-only' , 'All levels' , l ) , #, 'Leaf' ,
                        selected = head( l , 1 )
     )
                 })
@@ -448,119 +448,7 @@ malaria_data_formulas <- function( input, output, session ,
   
   
   # Request data button.  ####
-
-  fetch <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
-    
-    print( paste( 'period is ', periods. ) )
-    periods_vector = str_split( periods. , ";" ) %>% unlist
-    
-    n_periods = length( periods_vector )
-    print( paste( 'n_periods' , n_periods ))
-    
-    # translate level name to LEVEL-1, etc
-    level = ousLevels() %>% filter( levelName %in% orgUnits.) %>% pull( level )
-    ouLevel = paste0( "LEVEL-", level )
-    print( paste( level, ouLevel) )
-    
-    data = list( n_periods )
-    
-    withProgress(message =  'Requests are being made for Sums and Counts\n',
-                 detail = aggregationType. , 
-                 value = 0 , {
-      
-      # TODO: parellize with furrr:future_map (plan-multiprocess)             
-      for ( i in 1:n_periods ){
-        
-        data[[i]] = fetch_get( baseurl. , de. , periods_vector[i] , ouLevel , aggregationType. )
-        
-        incProgress(1/ n_periods )
-        
-        }
-      })
-    
-    return( bind_rows( data ) )
-  }
-  
-  fetch_get <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
-    
-    url = api_url( baseurl. , de. , periods. , orgUnits. , aggregationType. )
-    
-    # fetch = retry( get( url , .print = TRUE )[[1]] ) # if time-out or other error, will retry 
-    fetch = get( url , .print = TRUE )
-    
-    # print( paste( 'fetch class' , class( fetch ) ) )
-    # print( paste( 'fetch class[[1]]' , class( fetch[[1]] ) ) ) 
-    
-    fetch = fetch[[1]] 
-    
-    # if returns a data frame of values (e.g. not 'server error'), then keep
-    # print( paste( 'did fetch return data frame?' , is.data.frame( fetch )))
-    
-    if ( is.data.frame( fetch ) ){ 
-      
-    # remove unneeded cols
-      
-      cols = colnames( fetch ) 
-      
-      unneeded.cols = which( cols %in% c( 'storedBy', 'created', 'lastUpdated', 'comment' ))
-    
-      # print( glimpse( fetch )  )
-      
-      # print( paste( 'unneeded cols' , 
-      #               paste( unneeded.cols , collapse = "," ))
-      # )
-      
-      data.return = fetch %>% select( -unneeded.cols ) %>% as_tibble()
-      
-      print( paste( 'col names data', 
-                    paste( colnames( data.return ) , collapse = "," ) 
-                    )
-      )
-      
-      } else {
-      
-      print( paste( nrow( fetch ) , 'records\n' ) )
-      
-      de.cat = str_split( de. , fixed(".")) %>% unlist  
-      
-      data.return  = tibble( 
-        dataElement = de.cat[1] , 
-        categoryOptionCombo = de.cat[2] , 
-        period =  periods. ,
-        orgUnit =  orgUnits. ,
-        aggregationType = aggregationType. ,
-        value = NA
-      )
-      
-      print( "no records" )
-    }
-    
-    return( data.return )
-  }
-  
-  translate_fetch = function( df ){
-    
-      df %>%
-      
-      rename( dataElement.id = dataElement , 
-              categoryOptionCombo.ids = categoryOptionCombo 
-      ) %>%
-      
-      left_join( formulaElements() %>% 
-                   select( dataElement, dataElement.id , 
-                           Categories, categoryOptionCombo.ids ) %>% 
-                   mutate( dataElement.id = dataElement.id %>% str_trim ,
-                           categoryOptionCombo.ids = categoryOptionCombo.ids %>% str_trim )  ,
-                 by = c( "dataElement.id" , "categoryOptionCombo.ids" )
-      ) %>%
-      
-      left_join( ous() %>% 
-                   select( id, name, level, levelName )  %>% 
-                   rename( orgUnit = id , orgUnitName = name ) ,
-                 by = 'orgUnit' 
-      )  
-  }
-  
+ 
   dd = eventReactive( input$requestButton , {
     
     if (is.null( input$period ) ) showModal( modalDialog('please select a valid period') )
@@ -577,8 +465,14 @@ malaria_data_formulas <- function( input, output, session ,
       pull( de.cat ) %>%
       paste( collapse = ";")
 
-
-    orgUnits =  input$orgUnits
+# 
+#     levels = if ( input$orgUnits %in% 'All levels'){
+#       ousLevels()  %>% arrange( desc( level )) %>% pull( level ) 
+#     } else {
+#       ousLevels() %>% filter( levelName %in% orgUnits ) %>% 
+#         pull( level ) 
+#     }
+        
     aggregationType = 'DEFAULT' 
     
     # Periods
@@ -591,29 +485,76 @@ malaria_data_formulas <- function( input, output, session ,
     if ( periods %in% 'months_last_5_years' ) periods = date_code( YrsPrevious = 5 )
     print( paste( 'Periods requested are' , periods ) )
     
-    # print( baseurl ); print( de ); print( periods ) ; print( orgUnits ); print( aggregationType )
-    
-    url = api_url( baseurl , de , periods , orgUnits , aggregationType )
-      
-    # print( url )
-    
-    output$apiUrl = renderText( url )
 
-    d.sum = fetch(  baseurl , de , periods , orgUnits , "SUM" ) %>% translate_fetch()
+    orgUnitSelection = input$orgUnits
+    print("input$orgUnits: "); print( orgUnitSelection )
+    
+orgUnits = case_when(
       
-    d.count = fetch(  baseurl , de , periods , orgUnits , "COUNT" ) %>% translate_fetch()
+      orgUnitSelection %in% 'All levels' ~ 
+        list( ousLevels()  %>% arrange( desc( level )) %>% pull( level ) %>%
+        paste0( "LEVEL-" , .  ) )  ,
       
-    if ( nrow( d.sum ) > 0 & nrow( d.count ) > 0 ){ 
-        
-        d = d.count %>% 
+      orgUnitSelection %in% 'Leaf-only' ~ 
+        list( 
+        # split orgunit ids into chunks of 100
+        ous()  %>% filter( leaf == TRUE ) %>% pull( id ) %>%
+                split( . , ceiling(seq_along( . )/100) ) %>%
+                map_chr( . , ~paste( .x , collapse = ";" ) )
+        )  , 
+      
+      TRUE ~ list(
+        ousLevels() %>% filter( levelName %in% orgUnitSelection ) %>%
+        pull( level ) %>%  paste0( "LEVEL-" , .  )  ) 
+    
+    ) %>% unlist #nb: each case evaluated as list, otherwise alsways returns vector of max length
+    
+    # loop through all levels requested
+    d.sum.level = list()
+    d.count.level = list()
+    for ( level in 1:length( orgUnits ) ){
+          
+      d.sum.level[[level]] = fetch(  baseurl , de , periods , orgUnits[level] , "SUM" )
+      
+      # if ( !input$orgUnits %in% c('All levels', 'leaf', 'Leaf-lexfvel') ){
+      d.count.level[[level]] = fetch(  baseurl , de , periods , orgUnits[level] , "COUNT" )
+      # }
+      
+    }
+    
+    # Combine lists into single tibble
+    d.sum = bind_rows( d.sum.level ) %>%
+        translate_fetch( . , formulaElements() , ous() ) %>%
+        inner_join( ous() %>% select(id, name, leaf, closedDate), 
+                      by = c('orgUnit' = 'id') ) 
+    # testing
+    print( 'd.sum') ; glimpse( d.sum )
+
+    print( paste( "fetch d.sum returned" , comma( nrow( d.sum ) ),  "rows") )
+  
+    
+    d.count = bind_rows( d.count.level ) %>% 
+      translate_fetch(  . , formulaElements() , ous() )
+    
+    print( paste( "fetch d.count returned" , nrow( d.count ),  "rows") )
+   # }  
+    # d.count = fetch(  baseurl , de , periods , orgUnits , "COUNT" ) %>% 
+    #   translate_fetch(  . , formulaElements() , ous() )
+    
+      
+    if ( nrow( d.sum ) > 0  ){ 
+      
+
+        print( "joining sum and count downloads")
+          
+        d = d.count %>%
           rename( COUNT = value ) %>%
           full_join( d.sum %>% rename( SUM = value ) ,
                      by = c("dataElement", "dataElement.id", "Categories" , "categoryOptionCombo.ids", "period", "orgUnit", "orgUnitName" ,  "level" , "levelName")
                      )  %>%
-          select( dataElement, Categories , orgUnitName, levelName , period,  COUNT , SUM , dataElement.id, categoryOptionCombo.ids , orgUnit, level ) %>%
+          select( dataElement, Categories , orgUnitName, levelName , period,  COUNT , SUM , dataElement.id, categoryOptionCombo.ids , orgUnit, level, leaf ) %>%
           arrange( dataElement , Categories , desc( period ) , level )
-        
-      } else{ 
+        } else{ 
         
         d = NULL }
       
@@ -661,8 +602,9 @@ malaria_data_formulas <- function( input, output, session ,
   )
     )
   
-  # Message when > 10000 records
   
+  
+  # Message when > 10000 records
   limitDisplayMessage = reactive({ 
     req( dd() )
     
@@ -764,7 +706,7 @@ malaria_data_formulas <- function( input, output, session ,
     # print( head(dd() ) )
     
     d = formulaData() %>%
-      select( levelName, orgUnit , orgUnitName, period , dataElement.id , categoryOptionCombo.ids , 
+      select( level, levelName, leaf, orgUnit , orgUnitName, period , dataElement.id , categoryOptionCombo.ids , 
               SUM , COUNT ) %>%
       mutate(
         # dataElement.id = paste0( "[" , dataElement.id , "]") ,
@@ -775,14 +717,14 @@ malaria_data_formulas <- function( input, output, session ,
       unite( "box" , dataElement.id , categoryOptionCombo.ids, 
              sep = ".", remove = TRUE, na.rm = FALSE 
       ) %>%
-      complete( box, period , nesting( levelName, orgUnitName, orgUnit ) , 
+      complete( box, period , nesting( leaf, level, levelName, orgUnitName, orgUnit ) , 
                 fill = list( SUM = 0 ,
                              COUNT = 0 
                              ) )  
 
     # print( 'this is d....\n' )
     # 
-    print( paste( 'nrow(d)' , nrow(d) ) )
+    print( 'glimpse(d):' ) ; glimpse(d) 
     print( paste( 'formula_expression:' , formula_expression()  ) )
     
       # parse expressions...
@@ -798,7 +740,7 @@ malaria_data_formulas <- function( input, output, session ,
         pivot_wider(
           names_from = box,
           values_from = SUM ) %>%
-        group_by( levelName, orgUnitName, orgUnit, period  )  %>%
+        group_by( levelName, orgUnitName, orgUnit, period, level, leaf  )  %>%
         summarise( sum = eval( parse( text  = sum.fe ) ) )
       
       # count expressions...
@@ -806,7 +748,7 @@ malaria_data_formulas <- function( input, output, session ,
       max.fe = paste("max(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
       # any.fe = paste("any(c(" , str_replace_all( formula_expression , fixed("+") , "," ) , "))" )
       
-      print( paste( 'colnames dataset_sum' , colnames(dataset_sum)  ) )
+      print( 'glimpse dataset_sum:'  ) ; glimpse(dataset_sum)
       print( paste( 'min.fe:' , min.fe ) )
       
       dataset_count = d %>%
@@ -814,17 +756,17 @@ malaria_data_formulas <- function( input, output, session ,
         pivot_wider(
           names_from = box,
           values_from = COUNT ) %>%
-        group_by( levelName, orgUnitName, orgUnit, period  ) %>%
-        summarise( Count.min = eval( parse( text  = min.fe ) ) ,
-                   Count.max = eval( parse( text  = max.fe ) )
+        group_by( levelName, orgUnitName, orgUnit, period, level, leaf  ) %>%
+        summarise( Count.Complete = eval( parse( text  = min.fe ) ) ,
+                   Count.Any = eval( parse( text  = max.fe ) )
                    # , any.Count = eval( parse( text  = any.fe ) )
         )
       
-      print( paste( 'colnames dataset_count' , colnames(dataset_count)  ) )
+      print( 'glimpse dataset_count' ) ; glimpse(dataset_count)
       
-      dataset = inner_join( dataset_sum , 
+      dataset = full_join( dataset_sum , 
                             dataset_count ,
-                            by = c("levelName", "orgUnit" , "orgUnitName", "period")
+                            by = c("levelName", "orgUnit" , "orgUnitName", "period", "level" , "leaf")
       ) 
 
       return( dataset )
