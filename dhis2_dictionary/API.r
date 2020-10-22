@@ -85,7 +85,7 @@ get = function( source_url , .print = TRUE , json = TRUE , ...){
   # test if return valid content
   is.json = jsonlite::validate( get_content )
   
-  print( paste( 'testing if json' , is.json ) )
+  if ( .print )  print( paste( 'testing if json' , is.json ) )
   
   if ( json ){ 
     
@@ -189,7 +189,7 @@ api_url = function( baseurl, de ,  periods, orgUnits , aggregationType ){
   
   # print( baseurl ); print( de ); print( periods ) ; print( orgUnits ); print( aggregationType )
   
-  url <- paste0( baseurl, 
+  url <- paste0( baseurl , 
                  "api/analytics/dataValueSet.json?" ,
                  # "api/analytics.json?" ,
                  "&dimension=ou:", orgUnits , 
@@ -640,7 +640,11 @@ api_last12months_national_data = function(
   
   fetch_get <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
     
-    url = api_url( baseurl. , de. , periods. , orgUnits. , aggregationType. )
+    url = api_url( baseurl = baseurl. , 
+                   de = de. , 
+                   periods = periods. , 
+                   orgUnits = orgUnits. , 
+                   aggregationType = aggregationType. )
     
     # fetch = retry( get( url , .print = TRUE )[[1]] ) # if time-out or other error, will retry 
     fetch = get( url , .print = TRUE )
@@ -656,6 +660,7 @@ api_last12months_national_data = function(
     if ( is.data.frame( fetch ) ){ 
       
     # remove unneeded cols
+      print( paste( nrow( fetch ) , 'records\n' ) )
       
       cols = colnames( fetch ) 
       
@@ -669,14 +674,12 @@ api_last12months_national_data = function(
       
       data.return = fetch %>% select( -unneeded.cols ) %>% as_tibble()
       
-      print( paste( 'col names data', 
-                    paste( colnames( data.return ) , collapse = "," ) 
-                    )
-      )
+      # print( paste( 'col names data', 
+      #               paste( colnames( data.return ) , collapse = "," ) 
+      #               )
+      # )
       
       } else {
-      
-      print( paste( nrow( fetch ) , 'records\n' ) )
       
       de.cat = str_split( de. , fixed(".")) %>% unlist  
       
@@ -774,7 +777,7 @@ translate_formula = function( f ,
     # save( de, coc, elements.cc, elements.de, file='test_translate_form.rda')
     
   trans = bind_rows( 
-    de %>% inner_join( elements.de  ) ,
+    de %>% inner_join( elements.de ) ,
     coc %>% inner_join( elements.cc )
   ) %>% arrange( - start )
   # trans

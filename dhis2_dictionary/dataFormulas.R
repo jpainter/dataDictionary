@@ -744,8 +744,8 @@ orgUnits = case_when(
         summarise( sum = eval( parse( text  = sum.fe ) ) )
       
       # count expressions...
-      min.fe = paste("min(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
-      max.fe = paste("max(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
+      # min.fe = paste("min(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
+      # max.fe = paste("max(c(" , str_replace_all( formula_expression() , fixed("+") , "," ) , "))" )
       # any.fe = paste("any(c(" , str_replace_all( formula_expression , fixed("+") , "," ) , "))" )
       
       print( 'glimpse dataset_sum:'  ) ; glimpse(dataset_sum)
@@ -852,15 +852,17 @@ orgUnits = case_when(
       writeDataTable(  wb, sheet2, formula_table() , rowNames = FALSE)
       
       fe = map_df( which( nchar(formula_table()$Formula.Name) > 0  ) ,~{
+        
         formula.name = formula_table()$Formula.Name[ .x ]
         formula = formula_table()$Formula[ .x ]
         fe = 
-            formula_to_formulaElements( formula , mde() ) %>% 
+            formula_to_formulaElements( formula , ade() ) %>% 
                         select( -dataElement.id , -displayName , everything() ) %>%
             mutate( Formula.Name = formula.name ) %>%
             select( Formula.Name , everything() )
         
         return( fe )
+        
       }
       )
       
