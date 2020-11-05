@@ -116,7 +116,7 @@ ui <- dashboardPage(
       
       menuItem("Malaria-relevant Elements", tabName = "MDE", icon = icon("chart-line")) ,
       
-      menuItem("Malaria Data Formulas", tabName = "formulas", icon = icon("chart-line")) ,
+      menuItem( strong("Formulas") , tabName = "formulas", icon = icon("chart-line")) ,
       
       menuItem("All Elements", tabName = "DE", icon = icon("chart-line")),
       
@@ -272,15 +272,17 @@ server <-  function(input, output, session){
                                malariaDataElements = malaria_data_elements
                                )
    
-   org_Units = callModule( org_units , "ou" , login_baseurl = login_baseurl )
+   org_Units = callModule( org_units , "ou" , login_baseurl = login_baseurl  )
 
-   data_dictionary = callModule( data_elements , "de" , login_baseurl = login_baseurl )
+   data_dictionary = callModule( data_elements , "de" , 
+                                 login_baseurl = login_baseurl 
+                                 )
    
    malaria_data_elements = callModule( malaria_data_elements , "mde" ,
                                       data_elements = data_dictionary,  
                                       login_baseurl = login_baseurl )
    
-   malaria_data_formulas = callModule( malaria_data_formulas , "formulas" ,
+   data_formulas = callModule( data_formulas , "formulas" ,
                                       malariaDataElements = malaria_data_elements ,
                                       allDataElements = data_dictionary ,
                                       org_Units = org_Units ,  

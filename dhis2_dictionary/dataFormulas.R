@@ -166,7 +166,7 @@ malaria_data_formulas_UI <- function( id ) {
 )}
 
 # Server function ####
-malaria_data_formulas <- function( input, output, session , 
+data_formulas <- function( input, output, session , 
                                    malariaDataElements , 
                                    allDataElements , 
                                    org_Units, 
@@ -838,38 +838,40 @@ orgUnits = case_when(
   
   output$downloadFormulas <- downloadHandler(
     
-    filename = function() { 
-      paste0( instance() , "_Formulas_" , Sys.Date()  ,".xlsx" ) 
+    filename = function() {
+      paste0( 
+        instance() ,
+        "_Formulas_" , Sys.Date()  ,".xlsx" )
     },
-    
+
     content = function( file ) {
-      
+
       wb <- openxlsx::createWorkbook()
-      
+
       sheet2  <- addWorksheet( wb, sheetName = "Formula")
       sheet3  <- addWorksheet( wb, sheetName = "Formula Elements")
-      
+
       writeDataTable(  wb, sheet2, formula_table() , rowNames = FALSE)
       
       fe = map_df( which( nchar(formula_table()$Formula.Name) > 0  ) ,~{
-        
+
         formula.name = formula_table()$Formula.Name[ .x ]
         formula = formula_table()$Formula[ .x ]
-        fe = 
-            formula_to_formulaElements( formula , ade() ) %>% 
+        fe =
+            formula_to_formulaElements( formula , ade() ) %>%
                         select( -dataElement.id , -displayName , everything() ) %>%
             mutate( Formula.Name = formula.name ) %>%
             select( Formula.Name , everything() )
-        
+
         return( fe )
-        
+
       }
       )
       
       writeDataTable( wb, sheet3, fe , rowNames = FALSE)
       
-      openxlsx::saveWorkbook( wb , file , overwrite = TRUE )   
-      
+      openxlsx::saveWorkbook( wb , file , overwrite = TRUE )
+
     }
   )
   

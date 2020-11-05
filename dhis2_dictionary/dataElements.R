@@ -69,6 +69,7 @@ data_elements_UI <- function( id ) {
 # Server function ####
 data_elements <- function( input, output, session , login_baseurl ) {
   
+  print( 'dataElements server in dataElements module')
   
   conditionalPanel(condition="$('html').hasClass('shiny-busy')",
                    tags$div("Loading...",id="loadmessage")
@@ -76,14 +77,24 @@ data_elements <- function( input, output, session , login_baseurl ) {
   
   login = reactive({ login_baseurl$login() })
   baseurl = reactive({ login_baseurl$baseurl() })
-  
+  uploaded_DataElements = reactive({ login_baseurl$uploaded_DataElements() })
+  uploaded_DataElementGroups = reactive({ login_baseurl$uploaded_DataElementGroups() })
+  uploaded_DataSets = reactive({ login_baseurl$uploaded_DataSets() })
+  uploaded_Categories = reactive({ login_baseurl$uploaded_Categories() })
+  uploaded_Indicators = reactive({ login_baseurl$uploaded_Indicators() })
+  uploaded_dataDictionary = reactive({ login_baseurl$uploaded_dataDictionary() })
+
 
   # data Elements 
   dataElements = reactive({
     
+    print( 'reactive dataElements')
+    
+    showModal(modalDialog("Downloading list of data elements", footer=NULL))
+    
     if (  login() ){ 
       
-      showModal(modalDialog("Downloading list of data elements", footer=NULL))
+
       
       
       cols = c( 'id', 'name', 'shortName' , 'displayName', 'displayShortName' , 
@@ -103,19 +114,28 @@ data_elements <- function( input, output, session , login_baseurl ) {
       de.categoryCombo = dataElements$categoryCombo
       dataElements = dataElements %>% select( -categoryCombo ) 
       dataElements$categoryCombo.id = de.categoryCombo$id 
-      
-      removeModal()
+  
       
       return( dataElements )
       
-    } else { "Unable to login to server" }
+    } else { 
+
+      print( paste('uploaded_DataElements' , is_tibble( uploaded_DataElements() ) ) )
+
+      dataElements = uploaded_DataElements() 
+    }
+    
+    removeModal()
+    return( dataElements )
+
   }) 
   
   dataElementGroups = reactive({
 
+    print( 'reactive dataElementGroups') 
+    showModal(modalDialog("Getting list of data element groups", footer=NULL))
+    
     if (  login() ){
-      
-      showModal(modalDialog("Downloading list of data element groups", footer=NULL))
 
       # data element groups
       url<-paste0( baseurl() , "api/dataElementGroups.json?fields=:all&paging=false")
@@ -128,7 +148,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
       deg = map_df( 1:length( dataElementGroups$dataElementGroup) ,
                     ~merge( dataElementGroups[ .x, 1:2] ,
                             dataElementGroups$dataElements[[.x]] , all = T)
-      ) %>%
+                    ) %>%
         rename( dataElement.id = id) 
         
         # collapse all dataElementGroups associated with a data element
@@ -137,16 +157,23 @@ data_elements <- function( input, output, session , login_baseurl ) {
         #   dataElementGroup = paste( dataElementGroup, collapse = "\n")
         # )
       
-      removeModal()
-
-      return( deg )
-
-    } else { "Unable to login to server" }
+    } else { 
+      
+      print( 'returning uploaded_DataElementGroups' )
+      deg = uploaded_DataElementGroups() 
+      
+    }
+    
+    removeModal()
+    return( deg )
+    
   })
   
   # data sets
   dataSets = reactive({
-
+    
+    print( 'reactive dataSets')
+    
     if (  login() ){
       
       showModal(modalDialog("Downloading list of datasets", footer=NULL))
@@ -171,12 +198,18 @@ data_elements <- function( input, output, session , login_baseurl ) {
       
       return( dataSets )
       
-    } else { "Unable to login to server" }
+    } else {
+      
+        print( paste('uploaded_DataSets' , is_tibble( uploaded_DataSets() ) ) )
+
+        return( uploaded_DataSets() )
+      }
   })
   
   # category combos
   categoryCombos = reactive({
 
+    print( 'reactive categoryCombos')
     if (  login() ){
 
       showModal(modalDialog("Downloading list of categoryCombos", footer=NULL))
@@ -204,6 +237,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
   
   # category option combos
   categoryOptionCombos = reactive({
+    
+    print( 'reactive categoryOptionCombos')
     
     if (  login() ){
       
@@ -234,8 +269,10 @@ data_elements <- function( input, output, session , login_baseurl ) {
   # Categories: full list of category option combos
   categories = reactive({
     
-    req( categoryOptionCombos() )
-    req( categoryCombos() )
+    print( 'reactive categories')
+    
+    # req( categoryOptionCombos() )
+    # req( categoryCombos() )
 
     showModal(modalDialog("Collating categories information", footer=NULL))
     
@@ -263,31 +300,41 @@ data_elements <- function( input, output, session , login_baseurl ) {
           Categories = paste( categoryOptionCombo , collapse = ' ;\n '  ) ,
           categoryOptionCombo.ids = paste( categoryOptionCombo.id , collapse = ' ;\n '  )
         )
-
-      removeModal()
       
       return( categories )
 
-    } else { "Unable to login to server" }
+    } else {
+
+        print( 'returning uploaded_Categories')
+        return( uploaded_Categories() )
+    }
+    
+    removeModal()
   })
   
  # data elelement table ####
   
   dataDictionary = reactive({
-  
-    req( dataElements() )
-    req( dataSets() )
-    req( categories() )
-    req( dataElementGroups() )
     
-    showModal(modalDialog("Collating data element information", footer=NULL))
+    print( 'reactive dataDictionary')
+    
+    if ( login() ){
+  
+    req( dataElements() ) ; glimpse( dataElements() )
+    req( dataSets() ) ; glimpse( dataSets() )
+    req( categories() ) ; glimpse( categories() )
+    req( dataElementGroups() ) ; glimpse( dataElementGroups() )
+    
+    paste( 'creating dataDictionary' )
+    # showModal(modalDialog("Collating data element information", footer=NULL))
     
     de = dataElements()
     ds = dataSets()
     cats = categories()
     deg = dataElementGroups()
     
-    # glimpse( ds )
+    print( 'creating dsde' )
+    glimpse( ds )
     
     # DSDE : create matrix of data elements within each dataset
     dsde = map_df( 1:length( ds$dataSetElements),
@@ -295,8 +342,12 @@ data_elements <- function( input, output, session , login_baseurl ) {
                             ~as.matrix(.x) )) %>%
       select( -categoryCombo ) 
     
+    glimpse(dsde)
+    
     # Base Dictionary Line List (with categories collapsed)
-    dictionary = de  %>%  rename( dataElement = id ) %>%
+    print( 'creating dictionary' )
+   
+     dictionary = de  %>%  rename( dataElement = id ) %>%
       
       left_join( dsde , by = 'dataElement' ) %>%
       
@@ -328,6 +379,11 @@ data_elements <- function( input, output, session , login_baseurl ) {
         
         list( ~paste( unique(.) , collapse = ';\n' ) )
       )
+     
+    } else {
+      print( 'returning uploaded_dataDictionary')
+      dictionary = uploaded_dataDictionary()
+    }
       
     removeModal()
     
@@ -339,9 +395,10 @@ data_elements <- function( input, output, session , login_baseurl ) {
   
   indicators = reactive({
     
+    print( 'reactive indicators' )
+    showModal(modalDialog("Downloading list of indicators", footer=NULL))
+    
     if (  login() ){
-      
-      showModal(modalDialog("Downloading list of indicators", footer=NULL))
       
       # if available, use resources method
       url<-paste0( baseurl() ,"api/indicators.json?fields=:all&paging=false")
@@ -352,11 +409,15 @@ data_elements <- function( input, output, session , login_baseurl ) {
       
       indicators =  get( url )[[1]]  %>% select( !!cols ) 
       
-      removeModal()
+
       
-      return( indicators )
       
-    } else { "Unable to login to server" }
+      
+    } 
+    
+    removeModal()
+    return( indicators )
+    
   })
   
   
@@ -369,7 +430,7 @@ data_elements <- function( input, output, session , login_baseurl ) {
   id_names = reactive({
 
     req( dataElements() )
-    req( categoryOptionCombos() )
+    # req( categoryOptionCombos() )
 
     de = dataElements()  %>% select( id, name )
 
@@ -417,6 +478,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
 
     showModal(modalDialog("Collating indicator information", footer=NULL))
     
+    if (login()){
+      
     id_names = id_names()
 
     translated =
@@ -436,6 +499,14 @@ data_elements <- function( input, output, session , login_baseurl ) {
 
       select( name, description,  numerator, denominator, annualized,
               id, displayName, numerator.ids , denominator.ids )
+    
+    } else { 
+      
+      print( "returning uploaded_Indicators" )
+      
+      translated = uploaded_Indicators() 
+    }
+    
 
     removeModal()
     
@@ -522,6 +593,8 @@ data_elements <- function( input, output, session , login_baseurl ) {
   return(  list( dataDictionary = dataDictionary, 
                  indicators = indicators_translated ,
                  dataSets = dataSets,
+                 dataElements = dataElements ,
+                 dataElementGroups = dataElementGroups ,
                  categories = categories ,
                  categoryOptionCombos = categoryOptionCombos ,
                  categoryCombos = categoryCombos ) 

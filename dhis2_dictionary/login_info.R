@@ -13,6 +13,8 @@ login_info_UI <- function( id ) {
                 
                 tabPanel("Login", 
                          
+                         useShinyjs() ,  # Set up shinyjs
+                         
                          inputPanel(
                            
                            textInput( ns("baseurl") , label = "DHIS2 URL:", NULL ), # "https://play.dhis2.org/2.33.1/"
@@ -23,33 +25,35 @@ login_info_UI <- function( id ) {
                            
                            h3( textOutput( ns("Status") ) ) ,
                            
-                           actionButton( ns("loginButton"), "Request Metadata" , style='margin-top:25px' ) ,
-                           
                            checkboxInput( ns("demo") , 
                                           label = "Click to choose from one of the DHIS2 demo instances", 
                                           FALSE 
-                                           ) ,
+                           ) ,
                            
-                           useShinyjs() ,  # Set up shinyjs
                            selectInput( ns('instance') , "Instance" , choices = NULL ) , 
-                                    
-                           fileInput( ns('instancesFile'), 'Optional list of credentials (.xlsx)', 
-                                       accept = c(".xlsx", "xls") 
-                                       ) 
                            
-                           # TODO 
-                           # , fileInput( ns('metaDataFile'), 'Restore Previously Downloaded System Info(.xlsx)', 
-                           #             accept = c(".xlsx", "xls") 
-                           #             )
-                         ) , 
+                           fileInput( ns('instancesFile'), 'Optional list of credentials (.xlsx)', 
+                                      accept = c(".xlsx", "xls") 
+                           ) ) ,
+                           
+                         h3( textOutput( ns("Request new download of metadata or upload from previous request") ) ) ,
+                         
+                          fluidRow(
+                            
+                           column( 6, actionButton( ns("loginButton"), "Request Metadata" , style='margin-top:25px' ) ) ,
+                           
+                           column( 6 , fileInput( ns('input_metadataFile'), 
+                                                  h4( 'Upload Previously Defined Metadata (.xlsx) file'  ), 
+                                                  accept = c(".xlsx", "xls")  , width = "100%"
+                           ) )
+                          
+                          ) , 
+                         
+                         textOutput( ns('connection') ) ,
                          
                          br() , br() ,
 
-                         textOutput( ns('connection') ) ,
-                         
-                         br() , 
-                         
-                         downloadButton( ns( 'downloadInfo' ), 'Download system info') ,
+                         downloadButton( ns( 'downloadInfo' ), 'Download metadata and system info') ,
                          
                          br() ,
                          
@@ -60,7 +64,7 @@ login_info_UI <- function( id ) {
                          
                          ) ,
                 
-                tabPanel("Resources", 
+                tabPanel("API Resources", 
                          
                          h3( "The table below lists a link to retrieve metadata (not the data) for each DHIS2 attribute.") ,
                          
@@ -88,7 +92,40 @@ login_info <- function( input, output, session,
   # reactives to toggle login status
   login = reactiveVal( FALSE )
   loginFetch = reactiveVal( FALSE )
+
+  # Upload metadata 
   
+  metadataFile <- reactive({
+    
+    req( input$input_metadataFile )
+    
+    inFile <- input$input_metadataFile
+    
+    inFile$datapath
+  
+  })
+  
+
+  
+  uploaded_OrgUnitLevels = reactive({ read.xlsx( metadataFile() ,  "OrgUnitLevels" ) %>% as_tibble() })
+  uploaded_OrgUnits = reactive({ read.xlsx( metadataFile() ,  "OrgUnits" )  %>% as_tibble() })
+  
+  uploaded_DataElements = reactive({ read.xlsx( metadataFile() ,  "DataElements" )  %>% as_tibble() })
+
+  uploaded_DataElementGroups = reactive({ read.xlsx( metadataFile() ,  "DataElementGroups" )  %>% as_tibble() })
+  uploaded_Categories = reactive({ read.xlsx( metadataFile() ,  "Categories" )  %>% as_tibble() })
+  uploaded_DataSets = reactive({ read.xlsx( metadataFile() ,  "DataSets" )  %>% as_tibble() })
+  uploaded_Indicators = reactive({ read.xlsx( metadataFile() ,  "Indicators" )  %>% as_tibble() })
+  
+  uploaded_dataDictionary = reactive({ read.xlsx( metadataFile() ,  "DataElements" )  %>% as_tibble() })
+  
+  # Testing - not rqd 
+  observe({
+    print( paste('uploaded_DataElements' , is_tibble( uploaded_DataElements() ) ) )
+    print( paste('uploaded_DataSets' , is_tibble( uploaded_DataSets() ) ) )
+  })
+   
+
   
   # hide instance choice list unless demo checked
   shinyjs::hideElement( id = "instance" )
@@ -111,7 +148,7 @@ login_info <- function( input, output, session,
         }
   })
   
-  # uploaded instances ####
+# uploaded instances ####
   instance_file <- reactive({
     
     req( input$instancesFile )
@@ -121,6 +158,7 @@ login_info <- function( input, output, session,
     inFile$datapath
   })
   
+
  # Instances tibble
  instances = reactive({
    
@@ -155,7 +193,7 @@ login_info <- function( input, output, session,
    observe({
      req( input$instance )
      
-      loginFetch( FALSE ) # After change, no login until lgin  button pushed
+      loginFetch( FALSE ) # After change, no login until login  button pushed
       
       i_row = which( instances()$Instance %in% input$instance )
       
@@ -170,22 +208,56 @@ login_info <- function( input, output, session,
       }
    })
    
-   # Instance--selection ####
+# Instance--selection ####
+  # instance = reactive({
+  #    
+  #       if ( !is.null( input$instancesFile  ) ){
+  #      
+  #         i_row = which( instances()$Instance %in% input$instance )
+  #         
+  #         Instance = instances()$Instance[ i_row ]
+  #         
+  #       } else {
+  #         
+  #         Instance = str_split( baseurl() , "://")[[1]][2]
+  #       }
+  # 
+  #    return( Instance )
+  #  })
+
+   # instance
    instance = reactive({
      
-        if ( !is.null( input$instancesFile  ) ){
-       
+     print('reactive instance')
+
+
+     Instance = ifelse( !is.null( input$instance ),
+             input$instance ,
+             baseurl() ) 
+     
+      if ( !is.null( input$instancesFile  ) ){
+
           i_row = which( instances()$Instance %in% input$instance )
-          
+
           Instance = instances()$Instance[ i_row ]
-          
+          return( Instance )
+
         } else {
-          
+
           Instance = str_split( baseurl() , "://")[[1]][2]
+          return( Instance )
         }
      
-     return( Instance )
+     
+     if ( !is.na( input$input_metadataFile ) &&
+          nchar( input$input_metadataFile ) > 0 ){
+       
+       Instance = str_split(input$input_metadataFile , "_")[[1]][1]
+       return( Instance )
+     }
+
    })
+   
 
   baseurl = reactive({
     # if url is from login or dashboard url, trimto get baseurl
@@ -196,21 +268,7 @@ login_info <- function( input, output, session,
     
   })
   
-  # TODO : Restore previously downloaded metadata
-  # metadata_file <- reactive({
-  #   
-  #   req( input$metaDataFile )
-  #   
-  #   inFile <- input$metaDataFile
-  # 
-  #   inFile$datapath
-  # })
-  # 
-  # observeEvent( input$metaDataFile , {
-  #   
-  # })
-  
- 
+
   # Request Metatadata
   observeEvent( input$loginButton  , {
     if ( login()  ){ 
@@ -223,6 +281,7 @@ login_info <- function( input, output, session,
       }
 })
   
+
   credentialsProvided <- reactive({
     
     req( baseurl()  )
@@ -265,7 +324,7 @@ login_info <- function( input, output, session,
   # Update logged in status
   observeEvent( login() , {
     if (login() ){
-      output$Status = renderText( 'Logged in' )
+      output$Status = renderText( paste( 'Logged in' , instance() ) )
     } else {
       output$Status = renderText( 'Not logged in' )
       }
@@ -369,15 +428,7 @@ login_info <- function( input, output, session,
     
   )
   
-  # instance
-  instance = reactive({
-    
-    ifelse( !is.null( input$instance ), 
-                         input$instance ,
-                         baseurl() )
-    
-  })
-  
+
 
   # Download all meta data ####
   output$downloadInfo <- downloadHandler(
@@ -397,6 +448,8 @@ login_info <- function( input, output, session,
       sheet5  <- addWorksheet( wb, sheetName = "DataElements")
       sheet6  <- addWorksheet( wb, sheetName = "DataSets")
       sheet7  <- addWorksheet( wb, sheetName = "Indicators")
+      sheet8  <- addWorksheet( wb, sheetName = "Categories")
+      sheet9  <- addWorksheet( wb, sheetName = "DataElementGroups")
 
       writeDataTable( wb, sheet1, system.info() , rowNames = FALSE )
       writeDataTable(  wb, sheet2, meta_variables() , rowNames = FALSE )
@@ -407,6 +460,8 @@ login_info <- function( input, output, session,
       writeDataTable( wb, sheet5, data_elements$dataDictionary() , rowNames = FALSE )
       writeDataTable( wb, sheet6, data_elements$dataSets() , rowNames = FALSE )
       writeDataTable( wb, sheet7, data_elements$indicators() , rowNames = FALSE )
+      writeDataTable( wb, sheet8, data_elements$categories() , rowNames = FALSE )
+      writeDataTable( wb, sheet9, data_elements$dataElementGroups() , rowNames = FALSE )
 
       openxlsx::saveWorkbook( wb , file , overwrite = TRUE )
      }
@@ -450,8 +505,19 @@ login_info <- function( input, output, session,
     #     )
   )
   
-
-  return( list( login = loginFetch , baseurl = baseurl , instance = instance  ) )
+# Return ####
+  return( list( login = loginFetch , baseurl = baseurl , 
+                instance = instance ,
+                uploaded_OrgUnitLevels = uploaded_OrgUnitLevels ,
+                uploaded_OrgUnits = uploaded_OrgUnits ,
+                uploaded_DataElements = uploaded_DataElements ,
+                uploaded_DataElementGroups = uploaded_DataElementGroups ,
+                uploaded_Categories = uploaded_Categories ,
+                uploaded_DataSets = uploaded_DataSets ,
+                uploaded_Indicators = uploaded_Indicators ,
+                uploaded_dataDictionary = uploaded_dataDictionary
+                
+                ) )
     
 }
 

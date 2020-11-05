@@ -68,7 +68,8 @@ orgUnits_UI <- function( id ) {
 }
 
 # Server function ####
-org_units <- function( input, output, session , login_baseurl) {
+org_units <- function( input, output, session , 
+                       login_baseurl ) {
   
   
   conditionalPanel(condition="$('html').hasClass('shiny-busy')",
@@ -78,6 +79,8 @@ org_units <- function( input, output, session , login_baseurl) {
   login = reactive({ login_baseurl$login() })
   baseurl = reactive({ login_baseurl$baseurl() })
   instance = reactive({ login_baseurl$instance() })
+  uploaded_OrgUnits = reactive({ login_baseurl$uploaded_OrgUnits() })
+  uploaded_OrgUnitLevels = reactive({ login_baseurl$uploaded_OrgUnitLevels() })
  
 ## orgUnits reactive ####
   
@@ -99,7 +102,8 @@ org_units <- function( input, output, session , login_baseurl) {
   # })
   
   orgUnits = reactive({
-    req( login() )
+    
+    print( 'reactive orgUnits')
 
     if (  login() ){
 
@@ -135,14 +139,21 @@ org_units <- function( input, output, session , login_baseurl) {
       # test:
       # saveRDS( ous , 'orgUnits.rds' )
  
-      removeModal()
-
-      return( ous )
-
-    } else { "Unable to login to server" }
+    } else { 
+      
+      print( "retrieving uploaded_OrgUnits" )
+      ous = uploaded_OrgUnits()
+      glimpse( ous )
+    }
+    
+    removeModal()
+    
+    return( ous)
   })
   
   orgUnitDuplicates = reactive({
+    
+    req( orgUnits() )
     
     duplicates = orgUnits() %>%
       group_by( name ) %>%
@@ -159,7 +170,7 @@ org_units <- function( input, output, session , login_baseurl) {
   
   n_orgUnits_level = reactive({ 
     req( orgUnits() )
-    print( paste( 'n_orgunits_level' ))
+    # print( paste( 'n_orgunits_level' ))
     orgUnits() %>% count( level ) 
     })
     
@@ -174,6 +185,8 @@ org_units <- function( input, output, session , login_baseurl) {
 ## OrgUnitLevels ####
   
   orgUnitLevels = reactive({
+    
+    print( 'reactive orgUnitLevels')
     
     if (  login() ){
       
@@ -194,11 +207,15 @@ org_units <- function( input, output, session , login_baseurl) {
         arrange( level ) %>%
         rename( levelName = name ) 
       
-      removeModal()
+    } else { 
       
-      return( ousLevels )
-      
-    } else { "Unable to login to server" }
+      print( "retrieving uploaded_OrgUnitLevels" )
+      ousLevels = uploaded_OrgUnitLevels()
+    }
+    
+    removeModal()
+    
+    return( ousLevels )
   }) 
   
   
@@ -206,10 +223,20 @@ org_units <- function( input, output, session , login_baseurl) {
     req( orgUnitLevels() )
     req(  n_orgUnits_level() )
     
-    inner_join( orgUnitLevels() , n_orgUnits_level()  , by = 'level' ) %>%
-      rename( Number_Units = n ) %>%
-      select( level, levelName , Number_Units , lastUpdated , created , displayName, id )
-    
+    if ( login() ){
+      
+      ous_w_counts = inner_join( orgUnitLevels() , n_orgUnits_level()  , by = 'level' ) %>%
+        rename( Number_Units = n ) %>%
+        select( level, levelName , Number_Units , lastUpdated , created , displayName, id )
+      
+      
+      } else { 
+        
+        print( "retrieving uploaded_OrgUnitLevels" )
+        ousLevels = uploaded_OrgUnitLevels()
+      
+    }
+
     })
   
   
@@ -231,8 +258,13 @@ org_units <- function( input, output, session , login_baseurl) {
     print( url )
     
     geo = content( GET(url) , "text")  # indirect?
+    
     # test
-    # glimpse( fromJSON( geo ) ) # see how many rows before sf conversion 
+    glimpse( fromJSON( geo ) ) # see how many rows before sf conversion 
+    
+    # remove leading zeros
+    # geo = str_remove_all( geo , "^0+")
+    
     geojsonsf = geojsonio::geojson_sf( geo ) # works?!
     
     # geojsonsf = geojsonsf::geojson_sf( geo ) # returns group instead of id???
@@ -396,13 +428,18 @@ org_units <- function( input, output, session , login_baseurl) {
     
     levels = names(split_geofeatures)
     
+    # match( levels, orgUnitLevels() , )]
+    
     # test for empty geometry
     not_all_empty_geo = map_lgl( split_geofeatures , ~!all(is.na(st_dimension(.x))) )
+    print( paste( 'not_all_empty_geo: ', not_all_empty_geo ) )
+    
+    print( levels )
     
     n_levels = sum( not_all_empty_geo )
     
-    # print( paste('geoFeatures split into' , n_levels , 'levels' , 
-                 # names( split_geofeatures ), collapse = ',' ) )
+    print( paste('geoFeatures split into' , n_levels , 'levels' , 
+                 names( split_geofeatures ), collapse = ',' ) )
     
     colors = RColorBrewer::brewer.pal(n_levels, 'Pastel1')
     names( colors ) = levels[ not_all_empty_geo ]
@@ -427,14 +464,14 @@ org_units <- function( input, output, session , login_baseurl) {
   # map.district = ous_from_metatdata( .meta = md , simplify = FALSE , SF = TRUE ) 
   
   # output$geoFeatures_map = leaflet(width=900, height=650) %>%
-  #   
+  #
   #   # base map
   #   # addProviderTiles("Hydda.Base") %>%
-  #   
+  #
   #   addTiles(  urlTemplate =
   #                "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
   #   )  %>%
-  #   
+  #
   #   addPolygons( data = map.region ,
   #                group = 'Region' ,
   #                color = "black",
@@ -447,38 +484,38 @@ org_units <- function( input, output, session , login_baseurl) {
   #                fillOpacity = .5
   #   ) %>%
   #   addPolygons( data = map.district ,
-  #                group = 'District' , 
-  #                color = "black", 
-  #                weight = 1 , 
+  #                group = 'District' ,
+  #                color = "black",
+  #                weight = 1 ,
   #                opacity = 1 ,
   #                # label = ~paste( scales::percent(dec) ),
   #                # labelOptions = labelOptions(noHide = TRUE, textOnly = TRUE, textsize = "14px") ,
   #                popup = ~paste( orgUnit.name  , percent( dec ) )  ,
   #                fillColor =  ~binpal(dec),
   #                fillOpacity = .5
-  #   ) 
-  
-  # addCircleMarkers( data =  x.facilities , 
-  #                   ~long , ~lat , 
-  #                   radius = ~total/ radius_factor  , 
+  #   )
+
+  # addCircleMarkers( data =  x.facilities ,
+  #                   ~long , ~lat ,
+  #                   radius = ~total/ radius_factor  ,
   #                   fillColor = ~factpal( quality ) ,
-  #                   fillOpacity = 1 , 
+  #                   fillOpacity = 1 ,
   #                   weight = 1 ,
   #                   group = 'Facilities' ,
   #                   color = 'black' ,
   #                   opacity = .5 ,
   #                   popup = ~paste( orgUnit.name, "total:" , comma(total) ,
-  #                                   "quality:" , percent( dec ) ) 
+  #                                   "quality:" , percent( dec ) )
   # ) %>%
-  # 
+  #
   # addLabelOnlyMarkers(data = centers.district,
   #                     # group = 'District' ,
   #                     lng = ~x, lat = ~y, label = ~dec,
   #                     labelOptions = labelOptions(noHide = F, textOnly = TRUE, textsize = "15px" )
-  #                     
-  # ) %>% 
-  # 
-  # addLegend(position = "bottomright", pal = binpal, 
+  #
+  # ) %>%
+  #
+  # addLegend(position = "bottomright", pal = binpal,
   #           values = map.district$dec,
   #           title = "Quality",
   #           opacity = 1 )
@@ -498,7 +535,10 @@ org_units <- function( input, output, session , login_baseurl) {
   )
   
   output$orgUnit_table = DT::renderDT(
-
+    
+    # testing
+    # print( 'outputing orgUnit_table' ) ,
+    
     # do not include dataSets (if downloaded )
     if ( 'dataSets' %in% names(orgUnits() ) ){
       orgUnits() %>% select( - dataSets )  
