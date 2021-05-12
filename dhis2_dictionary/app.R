@@ -5,75 +5,17 @@
 
 # install and load libraries ####
 
-# Function to test if package is installed
-# Use this code if rquired packages are not in the shiny docker image and 
-# therefore need to be installed ####
+libraries = readLines( con = file( 'libraries.txt' ) , warn=FALSE )
+close( con )
+libraries = gsub(" ", "" ,  libraries) 
+libraries = libraries[ nchar( libraries ) > 0 ]
 
-# libraries = readLines( con = file( 'requirements.txt' ) , warn=FALSE )
-# libraries = gsub(" ", "" ,  libraries)
-# 
-# pkgTest <- function( package.list = libraries ){
-# 
-#   missing.packages = setdiff( package.list , rownames( installed.packages() ) )
-#   
-#   if ( length( missing.packages ) > 0 & nchar( missing.packages[1] ) ){
-#     print( missing.packages )
-# 
-#         install.packages( missing.packages
-#                           # , dependencies = TRUE ,
-#                           # , type="source" ,
-#                           # , repos = "https://cran.rstudio.com"
-#                           )
-#     }
-# 
-# }
-# 
-# # Test if packages installed
-# pkgTest( libraries )
-# 
-# # load the packages
-# suppressMessages(
-#   lapply( libraries , require  , character.only = TRUE)
-# )
+library( pacman )
+p_load( libraries , 
+        character.only = TRUE ,
+        install = FALSE , 
+        update = FALSE )
 
-
-# Load libraries ####
-library( data.table )
-library( shiny )
-library( shinyjs )
-library( shinydashboard )
-library( shinyBS )
-library( shinyLP )
-# library( tmap )
-library( leaflet )
-library( mapview )
-library( RColorBrewer )
-library( plotly )
-library( tidyverse )
-library( googleVis )
-library( scales )
-library( knitr )
-library( rlang )
-library( stringi )
-library( tidyselect )
-library( geojsonsf )
-library( geojsonio ) # must load before jsonlite - validate function conflict
-library( jsonlite )
-library( httr )
-library( curl )
-library( assertthat )
-library( knitrProgressBar )
-library( futile.logger )
-library( utils )
-library( DT )
-library( textutils )
-library( readxl )
-library( openxlsx  )
-library( anytime )
-library( lubridate )
-library( sf )
-
-library( rmapshaper )
 
 # library( shiny.worker )
 
