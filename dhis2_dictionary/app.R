@@ -75,6 +75,7 @@ library( sf )
 
 library( rmapshaper )
 
+# library( shiny.worker )
 
 # load modules ####
 source( 'API.r' )

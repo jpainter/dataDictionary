@@ -638,21 +638,24 @@ api_last12months_national_data = function(
     return( bind_rows( data ) )
   }
   
-  fetch_get <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ){
+  fetch_get <- function( baseurl. , de. , periods. , orgUnits. , aggregationType. ,
+                         
+                         .print = TRUE ){
     
     url = api_url( baseurl = baseurl. , 
                    de = de. , 
                    periods = periods. , 
                    orgUnits = orgUnits. , 
-                   aggregationType = aggregationType. )
+                   aggregationType = aggregationType.  )
     
-    # fetch = retry( get( url , .print = TRUE )[[1]] ) # if time-out or other error, will retry 
-    fetch = get( url , .print = TRUE )
-    
+    if ( .print ){
+      fetch = retry( get( url , .print = TRUE )[[1]] ) 
+    } else { 
+      fetch = get( url , .print = FALSE )[[1]] # if time-out or other error, will retry 
+    # fetch = get( url , .print = FALSE )
+    }
     # print( paste( 'fetch class' , class( fetch ) ) )
     # print( paste( 'fetch class[[1]]' , class( fetch[[1]] ) ) ) 
-    
-    fetch = fetch[[1]] 
     
     # if returns a data frame of values (e.g. not 'server error'), then keep
     # print( paste( 'did fetch return data frame?' , is.data.frame( fetch )))
@@ -660,7 +663,7 @@ api_last12months_national_data = function(
     if ( is.data.frame( fetch ) ){ 
       
     # remove unneeded cols
-      print( paste( nrow( fetch ) , 'records\n' ) )
+      if ( .print ) print( paste( nrow( fetch ) , 'records\n' ) )
       
       cols = colnames( fetch ) 
       
@@ -731,19 +734,26 @@ translate_formula = function( f ,
   # if ( translate_to %in% 'str' ){ var = "id" }
   
   # formula elements
-  elements.cc = elements %>% select( categoryOptionCombo.ids, Categories ) %>% 
+  elements.cc = elements %>% 
+    select( categoryOptionCombo.ids, Categories ) %>% 
     mutate( id = categoryOptionCombo.ids %>% str_trim(), str = Categories %>% str_trim()) %>% 
     select( id, str ) %>% unique()
   
-  elements.de = elements %>% select( dataElement.id, dataElement ) %>% 
+  elements.de = elements %>% 
+    select( dataElement.id, dataElement ) %>% 
     mutate( id = dataElement.id %>% str_trim(), str = dataElement %>% str_trim()) %>% 
     select( id, str ) %>% unique()
   
   # identify all text between two brackets
   reg1 = "\\[(.*?)\\]"
-  extract1 = str_extract_all( f , reg1 ) %>% unlist %>% 
-    gsub( "\\[|\\]" , "", . ) %>% str_trim()
+  
+  extract1 = str_extract_all( f , reg1 ) %>% 
+    unlist %>% 
+    gsub( "\\[|\\]" , "", . ) %>% 
+    str_trim()
+  
   loc1 = str_locate_all( f , reg1 )[[1]] %>% as_tibble()
+  
   all_text = tibble( start = loc1$start , 
                      end = loc1$end,  
                      {{ translate_from }} :=  extract1 
@@ -758,8 +768,13 @@ translate_formula = function( f ,
   
   # identify text between two brackets that follows a period
   reg2 = "\\.\\[(.*?)\\]"
-  extract2 = str_extract_all( f , reg2 ) %>% unlist %>% 
-    gsub( "\\[|\\]" , "", . ) %>% substring(., 2) %>% str_trim()
+  
+  extract2 = str_extract_all( f , reg2 ) %>% 
+    unlist %>% 
+    gsub( "\\[|\\]" , "", . ) %>% 
+    substring(., 2) %>% 
+    str_trim()
+  
   loc2 = str_locate_all( f , reg2 )[[1]] %>% as_tibble() 
   
   cc_text = tibble( start = loc2$start , end = loc2$end, {{ translate_from }} := extract2 )

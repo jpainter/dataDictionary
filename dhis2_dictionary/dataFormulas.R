@@ -174,6 +174,8 @@ data_formulas <- function( input, output, session ,
   # imported reactives ####
   login = reactive({ login_baseurl$login() })
   baseurl = reactive({ login_baseurl$baseurl() })
+  username = reactive({ login_baseurl$username() })
+  password = reactive({ login_baseurl$password() })
   instance = reactive({ login_baseurl$instance() })
   
   # malaria data elements
@@ -381,16 +383,16 @@ data_formulas <- function( input, output, session ,
         dataElement = map( formulaElements , ~strsplit( .x , "].[" , fixed = TRUE ) %>% unlist ) %>%
           map( . , 1 ) %>%
           str_replace_all( . , "\\[|\\]" , "" ) %>%
-          str_replace_all( . , fixed("]") , "" ) %>%
-          str_replace_all( . , fixed("[") , "" ) %>%
+          str_replace_all( . , stringr::fixed("]") , "" ) %>%
+          str_replace_all( . , stringr::fixed("[") , "" ) %>%
           str_trim() ,
         
         Categories = 
-          map( formulaElements , ~str_split( .x , fixed("].[") ) %>% unlist ) %>%
+          map( formulaElements , ~str_split( .x , stringr::fixed("].[") ) %>% unlist ) %>%
           map( . , 2 ) %>% 
           # str_replace_all( . , "\\[|\\]" , "" ) %>%
-          str_replace_all( . , fixed("]") , "" ) %>%
-          str_replace_all( . , fixed("[") , "" ) %>%
+          str_replace_all( . , stringr::fixed("]") , "" ) %>%
+          str_replace_all( . , stringr::fixed("[") , "" ) %>%
           str_trim() 
         
       ) %>% select( dataElement , Categories ) %>% unique
@@ -513,7 +515,11 @@ orgUnits = case_when(
     d.sum.level = list()
     d.count.level = list()
     for ( level in 1:length( orgUnits ) ){
-          
+       
+      # login (test)   
+      l = try( loginDHIS2( baseurl() , username(), password() ) )
+      print( paste( 'try loginDHIS2 is' , l , baseurl() , username(), password()  ))
+      
       d.sum.level[[level]] = fetch(  baseurl , de , periods , orgUnits[level] , "SUM" )
       
       # if ( !input$orgUnits %in% c('All levels', 'leaf', 'Leaf-lexfvel') ){
@@ -523,10 +529,16 @@ orgUnits = case_when(
     }
     
     # Combine lists into single tibble
+    if ( "closedDate" %in% names( ous() ) ){
+      orgUnit_cols = c( 'id', 'name', 'leaf', 'closedDate' ) 
+    } else {
+      orgUnit_cols = c( 'id', 'name', 'leaf' ) 
+    }
+    
     d.sum = bind_rows( d.sum.level ) %>%
         translate_fetch( . , formulaElements() , ous() ) %>%
-        inner_join( ous() %>% select(id, name, leaf, closedDate), 
-                      by = c('orgUnit' = 'id') ) 
+        inner_join( ous() %>% select( {{orgUnit_cols}} )  
+                      , by = c('orgUnit' = 'id') ) 
     # testing
     print( 'd.sum') ; glimpse( d.sum )
 

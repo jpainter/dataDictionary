@@ -78,6 +78,8 @@ org_units <- function( input, output, session ,
   
   login = reactive({ login_baseurl$login() })
   baseurl = reactive({ login_baseurl$baseurl() })
+  username = reactive({ login_baseurl$username() })
+  password = reactive({ login_baseurl$password() })
   instance = reactive({ login_baseurl$instance() })
   uploaded_OrgUnits = reactive({ login_baseurl$uploaded_OrgUnits() })
   uploaded_OrgUnitLevels = reactive({ login_baseurl$uploaded_OrgUnitLevels() })
@@ -107,14 +109,15 @@ org_units <- function( input, output, session ,
 
     if (  login() ){
 
-      showModal(modalDialog("Downloading list of organisation units", footer=NULL))
+      showModal(modalDialog("Loading list of organisation units", footer=NULL))
 
       # there are a couple forms of metadata in the api.  This code tests the format, then gets metadata
       # if available, use resources method
       
       cols = c( 'level' , 'name', 'id', 'shortName' , 'displayName', 'displayShortName', 
                 "leaf" , 
-                'created' , 'openingDate' , 'lastUpdated' , 'closedDate' ,
+                'created' , 'openingDate' , 'lastUpdated' , 
+                'closedDate' ,
                 # 'path',  
                 "parent" , 
                 # 'dataSets' , 
@@ -127,7 +130,7 @@ org_units <- function( input, output, session ,
                      "&paging=false")
       
       ous =  get( url )[[1]] %>% 
-        select( !!cols ) %>%
+        # select( !!cols ) %>% # closedDate missing for guinea--results in error.  already in url, so why select here? 
         left_join( orgUnitLevels() %>% 
                      select( level, levelName ) , by = 'level' 
                    ) %>%
@@ -202,6 +205,8 @@ org_units <- function( input, output, session ,
                      paste(cols, collapse = ",") , 
                      "&paging=false")
       
+      print('orgUnit URL'); print(url)
+      
       ousLevels =  get( url )[[1]]  %>% 
         select( !!cols ) %>% 
         arrange( level ) %>%
@@ -260,12 +265,40 @@ org_units <- function( input, output, session ,
     geo = content( GET(url) , "text")  # indirect?
     
     # test
-    glimpse( fromJSON( geo ) ) # see how many rows before sf conversion 
+    print( 'converting geojson to sf...')
+    # if( "character" %in% class( geo )){
+    # # if ( !jsonlite::validate( geo ) ){
+    #   # print( 'invalid geojson...try to fix', class(geo) ) #
+    # 
+    #   tf = tempfile( 'geo' )
+    #   write_lines( geo, tf )
+    #   txt <- readLines( tf )
+    #   class(txt) <- "json"
+    # 
+    #   txt = gsub("[\r\n]", "", txt )
+    # 
+    #   if ( jsonlite::validate( txt ) ){
+    #     geo = x
+    #   } else {
+    #     print( 'invalid geojson')
+    # 
+    #     geo = fix_coordinate_brackets( txt )
+    # 
+    #     if ( !jsonlite::validate( geo) ) return( NA )
+    # 
+    #   }
+    # 
+    #   # data.frame with coordinate as json
+    #   x = fromJSON( geo )
+    # }
+    
+    # glimpse( fromJSON( geo ) ) # see how many rows before sf conversion 
     
     # remove leading zeros
     # geo = str_remove_all( geo , "^0+")
     
-    geojsonsf = geojsonio::geojson_sf( geo ) # works?!
+    # geojsonsf = geojsonio::geojson_sf( geo ) # works?!
+    geojsonsf = geojsonsf::geojson_sf( geo ) 
     
     # geojsonsf = geojsonsf::geojson_sf( geo ) # returns group instead of id???
     
@@ -291,16 +324,23 @@ org_units <- function( input, output, session ,
       
       for ( l in levels ){
         
-        geosf[[ l ]] = geoFeatures_download( level = l , .pb = pb )
+        # login (test)   
+        login_status = try( loginDHIS2( baseurl() , username(), password() ) )
+        print( paste( 'try loginDHIS2 is' , login_status , 
+                      baseurl()  
+                      # , username(), password()  
+                      ))
+        
+        x =  geoFeatures_download( level = l , .pb = pb )
+        # glimpse( x )
+        if ( "sf" %in% class(x) ){  
+          geosf[[ l ]] = x  
+        } else { next }
+        
+        # geosf[[ l ]] = geoFeatures_download( level = l , .pb = pb )
         
         # geojsonsf = geojsonsf::geojson_sf( geo ) 
                 
-        # tf = tempfile( 'geo' )
-        # write_lines( geo, tf ) 
-        # txt <- readLines( tf )
-        # class(txt) <- "json"
-        # 
-        # if ( !jsonlite::validate( txt ) ){
         #   removeModal()
         #   
         #   return()
@@ -321,31 +361,40 @@ org_units <- function( input, output, session ,
     
         # geojsonsf = geojsonsf::geojson_sf( txt ) 
         
-        has.data =  nrow( geosf[[ l ]] ) > 0
-        print( paste( 'df level' ,l ) )
-        # print( has.data )
+        print( 'geofeatures_download complete ')
         
-        if ( has.data ){
-          
-          # test
-          # saveRDS( geosf , paste0('geosf' , l , '.rds') )
-          
-          # for top level, add parent column
-          if (! 'parent' %in% names( geosf[[ l ]] )  ){
-            geosf[[ l ]] = mutate( geosf[[ l ]], parent = NA )
-          }
-
-          glimpse( geosf[[ l ]] )
-          
-        }
+        # if ( is.na( geosf[[ l ]]) ){ 
+        #   has.data = FALSE 
+        #   } else {
+        #   has.data =  nrow( geosf[[ l ]] ) > 0 
+        #  }
+        # 
+        # 
+        # print( paste( 'df level' , l ) )
+        # print( paste( 'has.data:' , has.data ) )
+        # 
+        # if ( has.data ){
+        #   
+        #   # test
+        #   saveRDS( geosf , paste0('geosf' , l , '.rds') )
+        #   
+        #   # for top level, add parent column
+        #   if (! 'parent' %in% names( geosf[[ l ]] )  ){
+        #     geosf[[ l ]] = mutate( geosf[[ l ]], parent = NA )
+        #   }
+        # 
+        #   glimpse( geosf[[ l ]] )
+        #   
+        # }
         
       }
       
-      sf = reduce( geosf , rbind )
+      # print( paste( 'geosf has' , length( geosf ) , 'levels' ))
+      # sf = reduce( geosf , rbind )
 
-      print( 'geoFeatures' )
+      # print( 'glimpse sf/geoFeatures:' )
       
-      glimpse( sf ) 
+      # glimpse( sf ) 
       
       # test
       # saveRDS( sf , 'sf.rds')
@@ -353,19 +402,28 @@ org_units <- function( input, output, session ,
       
       print( 'linking geoFeatures with orgUnits' )
       
-      ous =  sf %>% 
-        select( id, geometry ) %>%
-        # filter( ! is.na( code ) ) %>%
-        right_join( orgUnits() %>% 
-                     # filter( ! is.na( code ) ) %>%
-                     select( id, levelName , name , leaf, parent , 
-                             lastUpdated , created, openingDate, closedDate ), 
-                   by = 'id' ) 
+      ous =  geosf %>% 
+        bind_rows() %>%
+        select( code, geometry ) 
       
+      print( "rows with ous geometry" ) ; print( nrow( ous ))
+        # filter( ! is.na( code ) ) %>%
+      
+      print( 'join ous with orgUnits()')
+      ous = ous %>% 
+        right_join( orgUnits() 
+                    # %>% 
+                    #  # filter( ! is.na( code ) ) %>%
+                    #  select( id, levelName , name , leaf, parent , 
+                    #          lastUpdated , created, openingDate, closedDate ) , 
+                   , by = 'code' ) 
+      
+      print( "rows with ous linked to orgUnits" ) ; print( nrow( ous ))
       # TODO: impute location of missing facilities/admin areas 
       
       glimpse( ous )
       print( paste( 'missing geometry for' , sum( is.na( ous$geometry ))) )
+      
       # test
       saveRDS( ous , 'ous.rds')
       
@@ -424,33 +482,40 @@ org_units <- function( input, output, session ,
     # if ( nrow( districts ) > 0 )  m = m  + mapview( districts )
     
     # split features into map for each level
+    # geo_features_not_null = map_lgl( geoFeatures(), ~!is.na(.x) )
+    # print( paste( 'geo_features no null:' , geo_features_not_null ))
+    # split_geofeatures = split( geoFeatures()[ geo_features_not_null ] , geoFeatures()$levelName )
+    
     split_geofeatures = split( geoFeatures() , geoFeatures()$levelName )
     
     levels = names(split_geofeatures)
+    print( levels )
     
     # match( levels, orgUnitLevels() , )]
     
     # test for empty geometry
     not_all_empty_geo = map_lgl( split_geofeatures , ~!all(is.na(st_dimension(.x))) )
-    print( paste( 'not_all_empty_geo: ', not_all_empty_geo ) )
-    
-    print( levels )
+    # print( paste( 'not_all_empty_geo: ', not_all_empty_geo ) )
     
     n_levels = sum( not_all_empty_geo )
     
     print( paste('geoFeatures split into' , n_levels , 'levels' , 
-                 names( split_geofeatures ), collapse = ',' ) )
+                 paste( names( split_geofeatures ), collapse = ',' ), sep = " " ) )
     
     colors = RColorBrewer::brewer.pal(n_levels, 'Pastel1')
     names( colors ) = levels[ not_all_empty_geo ]
     # colors = topo.colors(10)[ n_levels ] 
     
 
-    m_list = map( levels[ not_all_empty_geo ] ,
-                  ~mapView( split_geofeatures[ .x ] , 
-                            col.regions = colors[ .x ]
-                  ))
-    m = reduce( m_list , `+`)
+    # m_list = map( levels[ not_all_empty_geo ] ,
+    #               ~mapView( split_geofeatures[ .x ] , 
+    #                         col.regions = colors[ .x ]
+    #               ))
+    # m = reduce( m_list , `+`)
+    
+    m = mapView( split_geofeatures[ levels[ not_all_empty_geo ] ] , 
+                 col.regions = colors[ levels[ not_all_empty_geo] ] 
+    )
 
     m@map
     

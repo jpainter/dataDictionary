@@ -268,6 +268,11 @@ login_info <- function( input, output, session,
     
   })
   
+  username = reactive({ input$username })
+  
+  password = reactive({ input$password })
+  
+  
 
   # Request Metatadata
   observeEvent( input$loginButton  , {
@@ -506,7 +511,10 @@ login_info <- function( input, output, session,
   )
   
 # Return ####
-  return( list( login = loginFetch , baseurl = baseurl , 
+  return( list( login = loginFetch , 
+                baseurl = baseurl , 
+                username = username ,   
+                password = password , 
                 instance = instance ,
                 uploaded_OrgUnitLevels = uploaded_OrgUnitLevels ,
                 uploaded_OrgUnits = uploaded_OrgUnits ,
