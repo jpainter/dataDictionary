@@ -13,7 +13,7 @@ libraries = libraries[ nchar( libraries ) > 0 ]
 library( pacman )
 p_load( libraries , 
         character.only = TRUE ,
-        install = FALSE , 
+        install = TRUE , 
         update = FALSE )
 
 
