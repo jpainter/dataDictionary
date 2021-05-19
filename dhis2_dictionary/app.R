@@ -6,7 +6,7 @@
 # install and load libraries ####
 
 libraries = readLines( con = file( 'libraries.txt' ) , warn=FALSE )
-close( con )
+
 libraries = gsub(" ", "" ,  libraries) 
 libraries = libraries[ nchar( libraries ) > 0 ]
 
@@ -39,13 +39,15 @@ ui <- dashboardPage(
   
   # skin = 'blue',
   dashboardHeader(
-    title = "What's in your DHIS2?",
+    # title = "What's in your DHIS2?",
+    title = "DHIS2 Magic Glasses" ,
     titleWidth = 300
     ) ,
   
   #https://shiny.rstudio.com/reference/shiny/1.0.1/icon.html (choose icon)
   dashboardSidebar(
-    sidebarUserPanel( "What's in your DHIS2?" ) ,
+    # sidebarUserPanel( "What's in your DHIS2?" ) ,
+    # sidebarUserPanel( "DHIS2 Magic Glasses" ) ,
     
     sidebarMenu(
       
