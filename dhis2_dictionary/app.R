@@ -8,10 +8,11 @@
 libraries = readLines( con = file( 'libraries.txt' ) , warn=FALSE )
 
 libraries = gsub(" ", "" ,  libraries) 
+
 libraries = libraries[ nchar( libraries ) > 0 ]
 
 library( pacman )
-p_load( libraries , 
+p_load( char = libraries , 
         character.only = TRUE ,
         install = FALSE , 
         update = FALSE )
