@@ -273,6 +273,7 @@ data_formulas <- function( input, output, session ,
                        choices = formula_table() %>%
                          bind_rows( c(Formula.Name = "Add new formula") ) %>%
                          pull( Formula.Name ) ,
+                       selected = input$formulaName
                        )
 
   })
@@ -857,7 +858,35 @@ orgUnits = case_when(
     },
 
     content = function( file ) {
+      
+      # update formulas ####
+      f = which( formula_table()$Formula.Name %in% input$formulaName )
+      
+      if ( length(f) == 0 ){
+        
+        updated = rbind(
+          tibble( Formula.Name = input$formulaName , Formula = input$formulaText) ,
+          formula_table()
+        )
+        
+      } else {
+        
+        updated = formula_table()
+        updated$Formula.Name[f] = input$formulaName
+        updated$Formula[f] = input$formulaText
+      }
+      
+      formula_table( updated )
+      
+      #update select forumula pulldown list
+      updateSelectInput( session, 'selectFormula' ,
+                         choices = formula_table() %>%
+                           bind_rows( c(Formula.Name = "Add new formula") ) %>%
+                           pull( Formula.Name ) ,
+                         selected = input$formulaName
+      )
 
+      # Make new spreadsheet ####
       wb <- openxlsx::createWorkbook()
 
       sheet2  <- addWorksheet( wb, sheetName = "Formula")

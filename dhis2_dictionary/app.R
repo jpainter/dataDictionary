@@ -14,8 +14,8 @@ libraries = libraries[ nchar( libraries ) > 0 ]
 library( pacman )
 p_load( char = libraries , 
         character.only = TRUE ,
-        install = FALSE , 
-        update = FALSE )
+        install = TRUE , 
+        update = TRUE )
 
 
 # library( shiny.worker )

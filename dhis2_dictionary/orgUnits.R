@@ -258,11 +258,14 @@ org_units <- function( input, output, session ,
     
     update_progress(.pb)
     
-    url<-paste0( baseurl() , "api/organisationUnits.geojson?level=", level, "&paging=false")
+    url<-paste0( baseurl() , "api/organisationUnits.geojson?level=", level, 
+                 "&fields=:all&paging=false")
     
     print( url )
     
     geo = content( GET(url) , "text")  # indirect?
+    
+    # print( 'geo glimpse') ;  print( glimpse( geo ))
     
     # test
     print( 'converting geojson to sf...')
@@ -299,6 +302,7 @@ org_units <- function( input, output, session ,
     
     # geojsonsf = geojsonio::geojson_sf( geo ) # works?!
     geojsonsf = geojsonsf::geojson_sf( geo ) 
+    geojsonsf$id = fromJSON( geo )$features$id 
     
     # geojsonsf = geojsonsf::geojson_sf( geo ) # returns group instead of id???
     
@@ -311,6 +315,8 @@ org_units <- function( input, output, session ,
   geoFeatures = reactive({
     
     require( orgUnits() , orgUnitLevels() )
+    
+    print( 'geofeatures...')
     
     if (  login() ){
 
@@ -394,7 +400,7 @@ org_units <- function( input, output, session ,
 
       # print( 'glimpse sf/geoFeatures:' )
       
-      # glimpse( sf ) 
+      print( 'geosf[[ l ]]') ; print(  glimpse( geosf[[ l ]] ) )
       
       # test
       # saveRDS( sf , 'sf.rds')
@@ -402,21 +408,25 @@ org_units <- function( input, output, session ,
       
       print( 'linking geoFeatures with orgUnits' )
       
-      ous =  geosf %>% 
-        bind_rows() %>%
-        select( code, geometry ) 
+      ous =  geosf %>% bind_rows() 
       
-      print( "rows with ous geometry" ) ; print( nrow( ous ))
-        # filter( ! is.na( code ) ) %>%
+      print( 'names ous' ) ; print( names( ous ) )
+        
+      ous = ous %>% select( id, geometry ) 
+      
+      print( "ous: " ) ; print( ous )
       
       print( 'join ous with orgUnits()')
+      glimpse( ous )
+      glimpse( orgUnits()  )
+      
       ous = ous %>% 
         right_join( orgUnits() 
                     # %>% 
                     #  # filter( ! is.na( code ) ) %>%
                     #  select( id, levelName , name , leaf, parent , 
                     #          lastUpdated , created, openingDate, closedDate ) , 
-                   , by = 'code' ) 
+                   , by = 'id' ) 
       
       print( "rows with ous linked to orgUnits" ) ; print( nrow( ous ))
       # TODO: impute location of missing facilities/admin areas 
@@ -425,7 +435,8 @@ org_units <- function( input, output, session ,
       print( paste( 'missing geometry for' , sum( is.na( ous$geometry ))) )
       
       # test
-      saveRDS( ous , 'ous.rds')
+      
+      saveRDS( ous , 'geometry.rds')
       
       removeModal()
 
@@ -465,6 +476,9 @@ org_units <- function( input, output, session ,
   # geoFeatures MAP ####
   output$geoFeatures_map = renderLeaflet({
     
+    req( geoFeatures() )
+    print( 'geoFeatures_map():')
+    gf = geoFeatures()
     # admins = geoFeatures()  # %>%  filter( feature %in% 'Polygon' )
     # 
     # regions = filter( admins , level == 2 )
@@ -486,7 +500,10 @@ org_units <- function( input, output, session ,
     # print( paste( 'geo_features no null:' , geo_features_not_null ))
     # split_geofeatures = split( geoFeatures()[ geo_features_not_null ] , geoFeatures()$levelName )
     
-    split_geofeatures = split( geoFeatures() , geoFeatures()$levelName )
+    # Remove slaches from levelNAmes
+    gf$levelName = str_replace_all( gf$levelName , fixed("/") , ";")
+
+    split_geofeatures = split( gf , gf$levelName )
     
     levels = names(split_geofeatures)
     print( levels )
@@ -512,6 +529,9 @@ org_units <- function( input, output, session ,
     #                         col.regions = colors[ .x ]
     #               ))
     # m = reduce( m_list , `+`)
+    
+    # Set option to display points (https://stackoverflow.com/questions/65485747/mapview-points-not-showing-in-r)
+    mapviewOptions(fgb = FALSE) 
     
     m = mapView( split_geofeatures[ levels[ not_all_empty_geo ] ] , 
                  col.regions = colors[ levels[ not_all_empty_geo] ] 
